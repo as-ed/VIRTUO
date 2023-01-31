@@ -1,0 +1,21 @@
+[[source]]
+url = "https://pypi.org/simple"
+verify_ssl = true
+name = "pypi"
+
+[packages]
+pillow = "*"
+pytesseract = "*"
+easyocr = "*"
+jupyter = "*"
+notebook = "*"
+tesseract = "*"
+keras-ocr = "*"
+tensorflow-metal = "*"
+tensorflow-macos = "*"
+
+[dev-packages]
+
+[requires]
+python_version = "3.9"
+python_full_version = "3.9.13"
