@@ -1,0 +1,22 @@
+#!/bin/bash
+
+set -e
+
+if [[ "$1" =~ ^-.* ]]; then
+	ip="${2:-pi.local}"
+else
+	ip="${1:-pi.local}"
+fi
+
+if ! ping -c 1 $ip > /dev/null 2> /dev/null; then
+	echo "Host $ip not found"
+	exit 1
+fi
+
+echo "Starting sync ..."
+
+# always sync
+ssh pi@"${ip}" "mkdir -p /home/pi/virtuo"
+rsync -P -a --delete -e ssh --exclude="__pycache__/***" src/ pi@"${ip}":/home/pi/virtuo/src
+
+echo "Done"
