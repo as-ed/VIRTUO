@@ -1,0 +1,4 @@
+camera:
+  left: 0
+  right: 1
+book_location: /home/pi/books

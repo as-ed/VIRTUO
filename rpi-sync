@@ -15,8 +15,8 @@ fi
 
 echo "Starting sync ..."
 
-# always sync
 ssh pi@"${ip}" "mkdir -p /home/pi/virtuo"
-rsync -P -a --delete -e ssh --exclude="__pycache__/***" src/ pi@"${ip}":/home/pi/virtuo/src
+rsync -P -a --delete -e ssh --exclude-from=".rsync-exclude" . pi@"${ip}":/home/pi/virtuo
+ssh pi@"${ip}" "cd ~/virtuo && ~/.local/bin/pipenv sync"
 
 echo "Done"
