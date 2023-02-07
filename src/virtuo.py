@@ -2,6 +2,8 @@ from datetime import datetime
 import os
 from threading import Thread
 
+import cv2
+
 from config import CFG
 from hw.flipper import flip_page
 from ocr.camera import Camera, take_photo
@@ -18,7 +20,8 @@ def start_listeners() -> None:
 	while True:
 		if (i := input("Cmd: ").lower()) == "b":
 			# digitize book
-			scan_book()
+			#scan_book()
+			print(scan_page(Camera.left))
 		elif i == "s":
 			# play/pause
 			if not started:

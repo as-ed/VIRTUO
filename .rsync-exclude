@@ -1,7 +1,5 @@
 .*
 .*/***
 __pycache__/***
-Pipfile
-Pipfile.lock
 README.md
 rpi-sync

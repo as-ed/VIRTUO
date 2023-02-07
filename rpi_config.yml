@@ -1,4 +1,6 @@
 camera:
   left: 0
   right: 1
+  width: 1920
+  height: 1080
 book_location: /home/pi/books

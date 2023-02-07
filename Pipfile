@@ -5,7 +5,7 @@ name = "pypi"
 
 [packages]
 numpy = "==1.24.1"
-python-mpv = "==0.5.2"
+python-mpv = "==1.0.1"
 opencv-python = "==4.7.0.68"
 pyyaml = "==6.0"
 pytesseract = "==0.3.10"

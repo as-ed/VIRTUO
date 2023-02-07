@@ -17,6 +17,7 @@ echo "Starting sync ..."
 
 ssh pi@"${ip}" "mkdir -p /home/pi/virtuo"
 rsync -P -a --delete -e ssh --exclude-from=".rsync-exclude" . pi@"${ip}":/home/pi/virtuo
+ssh pi@"${ip}" "cd ~/virtuo && mv rpi_config.yml config.yml"
 ssh pi@"${ip}" "cd ~/virtuo && ~/.local/bin/pipenv sync"
 
 echo "Done"
