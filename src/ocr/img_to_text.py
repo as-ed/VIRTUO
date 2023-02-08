@@ -6,6 +6,8 @@ from PIL import Image
 import pytesseract
 import cv2
 
+from config import CFG
+
 
 def get_text(img: np.ndarray, book_loc: str, page_nr: int = 0, prev_sentence: str = "") -> Tuple[str, str]:
 	"""
@@ -31,14 +33,16 @@ def _pre_processing(img: np.ndarray) -> Image:
 	rotated = cv2.rotate(img, cv2.ROTATE_90_COUNTERCLOCKWISE)
 
 	# Binarize the image (Make each pixel either black or white based on a threshold)
-	_, binary = cv2.threshold(rotated, 110, 255, cv2.THRESH_BINARY)
+	_, binary = cv2.threshold(rotated, CFG["camera"]["black_threshold"], 255, cv2.THRESH_BINARY)
 
 	# Thicken the characters by eroding the surrounding white pixels
 	kernel = np.ones((3, 3), np.uint8)
 	eroded = cv2.erode(binary, kernel, iterations=1)
 
 	# Apply noise removal (smoothen character edges)
-	return cv2.fastNlMeansDenoising(eroded, None, 20, 7, 21)
+	denoised = cv2.fastNlMeansDenoising(eroded, None, 20, 7, 21)
+
+	return Image.fromarray(denoised)
 
 
 def _save_img(img: Image, book_loc: str, page_nr: int) -> None:
