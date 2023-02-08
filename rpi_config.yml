@@ -5,6 +5,7 @@ camera:
   height: 1080
   photo_delay: 1
   focus: 20
+  black_threshold: 110
 audio:
   voices:
     - name: Male 1
