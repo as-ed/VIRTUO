@@ -4,14 +4,17 @@ verify_ssl = true
 name = "pypi"
 
 [packages]
-numpy = "==1.24.1"
+numpy = "==1.21.6"
 python-mpv = "==1.0.1"
 opencv-python = "==4.7.0.68"
 pyyaml = "==6.0"
 pytesseract = "==0.3.10"
 Pillow = "==9.4.0"
+TTS = "==0.10.2"
+soundfile = "==0.11.0"
 
 [dev-packages]
+jupyter = "*"
 
 [requires]
 python_version = "3.9"

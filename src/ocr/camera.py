@@ -12,10 +12,18 @@ class Camera(Enum):
 
 def take_photo(camera: Camera) -> np.ndarray:
 	cam = cv2.VideoCapture(camera.value)
+
+	# set camera properties
 	cam.set(cv2.CAP_PROP_FRAME_WIDTH, CFG["camera"]["width"])
 	cam.set(cv2.CAP_PROP_FRAME_HEIGHT, CFG["camera"]["height"])
-	for _ in range(int(cam.get(cv2.CAP_PROP_FPS) * CFG["camera"]["af_time"])):
+	cam.set(cv2.CAP_PROP_AUTOFOCUS, 0)
+	cam.set(cv2.CAP_PROP_FOCUS, CFG["camera"]["focus"])
+
+	# wait for photo delay
+	for _ in range(int(cam.get(cv2.CAP_PROP_FPS) * CFG["camera"]["photo_delay"])):
 		cam.read()
+
+	# take image
 	_, img = cam.read()
 	cam.release()
 	return img

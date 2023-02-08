@@ -3,4 +3,13 @@ camera:
   right: 1
   width: 1920
   height: 1080
+  photo_delay: 1
+  focus: 20
+audio:
+  voices:
+    - name: Male 1
+      path: ""
+    - name: Female 1
+      path: "tts_models/en/ljspeech/tacotron2-DCA"
+  default_voice: 1
 book_location: /home/pi/books

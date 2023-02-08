@@ -1,36 +1,46 @@
+import io
 from queue import SimpleQueue, Empty
-from typing import Union
+from typing import Union, List
 
 from mpv import MPV
+import soundfile as sf
 
 
 class _AudioPlayer:
 	_DEFAULT_VOLUME = 1
+	_SENTINEL = object()
 
 	def __init__(self) -> None:
 		self._player = MPV(ytdl=False)
 		self._stream = None
-		self._stream_queue = None
+		self._stream_queue = SimpleQueue()
 
 		self._player.volume = _AudioPlayer._DEFAULT_VOLUME * 100
 
-	def play(self, audio: Union[str, bytes], timestamp: float = 0, background: bool = False) -> None:
+	def play(self, audio: Union[str, List[float]], timestamp: float = 0, background: bool = True) -> None:
 		self._player.stop()
+		self._stream_queue.put(_AudioPlayer._SENTINEL)
+		if self._player.pause:
+			self._player.cycle("pause")
 
-		if isinstance(audio, bytes):
+		if isinstance(audio, list):
 			if self._stream is not None:
 				self._stream.unregister()
 
 			self._stream_queue = SimpleQueue()
-			self._stream_queue.put(audio)
+			self.add_audio(audio)
 
 			@self._player.python_stream("stream")
 			def stream() -> bytes:
 				while True:
-					try:
-						yield self._stream_queue.get(False)
-					except Empty:
+					if (frames := self._stream_queue.get()) == _AudioPlayer._SENTINEL:
 						return
+
+					with frames as f:
+						while data := f.read(1024**2):
+							yield data
+						yield b""
+						yield b""
 
 			self._stream = stream
 			audio_loc = "python://stream"
@@ -42,8 +52,11 @@ class _AudioPlayer:
 		if not background:
 			self._player.wait_for_playback()
 
-	def add_audio(self, bytes) -> None:
-		self._stream_queue.put(bytes)
+	def add_audio(self, audio: List[float]) -> None:
+		audio_bytes = io.BytesIO()
+		sf.write(audio_bytes, audio, samplerate=22050, format="FLAC")
+		audio_bytes.seek(0)
+		self._stream_queue.put(audio_bytes)
 
 	def play_pause(self) -> bool:
 		self._player.cycle("pause")
