@@ -4,6 +4,7 @@ from typing import Tuple
 import numpy as np
 from PIL import Image
 import pytesseract
+import cv2
 
 
 def get_text(img: np.ndarray, book_loc: str, page_nr: int = 0, prev_sentence: str = "") -> Tuple[str, str]:
@@ -23,7 +24,21 @@ def get_text(img: np.ndarray, book_loc: str, page_nr: int = 0, prev_sentence: st
 
 
 def _pre_processing(img: np.ndarray) -> Image:
-	return Image.fromarray(img).transpose(Image.ROTATE_90)
+	# Load the image into a CV2 object and convert it to grayscale
+	img = cv2.cvtColor(img, cv2.COLOR_BGR2GRAY)
+
+	# Rotate image by 90 degrees as camera returns a landscape orientation
+	rotated = cv2.rotate(img, cv2.ROTATE_90_COUNTERCLOCKWISE)
+
+	# Binarize the image (Make each pixel either black or white based on a threshold)
+	_, binary = cv2.threshold(rotated, 110, 255, cv2.THRESH_BINARY)
+
+	# Thicken the characters by eroding the surrounding white pixels
+	kernel = np.ones((3, 3), np.uint8)
+	eroded = cv2.erode(binary, kernel, iterations=1)
+
+	# Apply noise removal (smoothen character edges)
+	return cv2.fastNlMeansDenoising(eroded, None, 20, 7, 21)
 
 
 def _save_img(img: Image, book_loc: str, page_nr: int) -> None:
