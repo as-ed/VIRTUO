@@ -17,13 +17,13 @@ class _AudioPlayer:
 
 		self._player.volume = _AudioPlayer._DEFAULT_VOLUME * 100
 
-	def play(self, audio: Union[str, List[float]], timestamp: float = 0, background: bool = True) -> None:
+	def play(self, audio: Union[str, bytes], timestamp: float = 0, background: bool = True) -> None:
 		self._player.stop()
 		self._stream_queue.put(_AudioPlayer._SENTINEL)
 		if self._player.pause:
 			self._player.cycle("pause")
 
-		if isinstance(audio, list):
+		if isinstance(audio, bytes):
 			if self._stream is not None:
 				self._stream.unregister()
 
@@ -52,9 +52,10 @@ class _AudioPlayer:
 		if not background:
 			self._player.wait_for_playback()
 
-	def add_audio(self, audio: List[float]) -> None:
+	def add_audio(self, audio: bytes) -> None:
+		data, rate = sf.read(io.BytesIO(audio))
 		audio_bytes = io.BytesIO()
-		sf.write(audio_bytes, audio, samplerate=22050, format="FLAC")
+		sf.write(audio_bytes, data, samplerate=rate, format="FLAC")
 		audio_bytes.seek(0)
 		self._stream_queue.put(audio_bytes)
 

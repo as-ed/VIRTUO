@@ -1,6 +1,6 @@
 camera:
   left: 0
-  right: 1
+  right: 0
   width: 1920
   height: 1080
   photo_delay: 1
@@ -8,9 +8,13 @@ camera:
   black_threshold: 110
 audio:
   voices:
-    - name: Male 1
-      path: ""
-    - name: Female 1
-      path: "tts_models/en/ljspeech/tacotron2-DCA"
-  default_voice: 1
+    google_tts:
+      - name: Male 1
+        voice_name: en-GB-Standard-D
+        language: en-GB
+      - name: Female 1
+        voice_name: en-GB-Standard-C
+        language: en-GB
+    google_default: 0
+    google_speaking_rate: 1
 book_location: /home/pi/books

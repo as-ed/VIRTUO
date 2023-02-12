@@ -25,7 +25,7 @@ def start_listeners() -> None:
 				scan_book(True)
 				started = True
 			else:
-				pass
+				player.play_pause()
 		elif i == "a":
 			# rewind
 			pass

@@ -4,14 +4,15 @@ verify_ssl = true
 name = "pypi"
 
 [packages]
-numpy = "==1.21.6"
+numpy = "==1.24.2"
 python-mpv = "==1.0.1"
 opencv-python = "==4.7.0.68"
 pyyaml = "==6.0"
 pytesseract = "==0.3.10"
 Pillow = "==9.4.0"
-TTS = "==0.10.2"
 soundfile = "==0.11.0"
+google-auth = "2.14.1"
+google-cloud-texttospeech = "==2.12.1"
 
 [dev-packages]
 jupyter = "*"

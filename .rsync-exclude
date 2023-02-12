@@ -3,3 +3,7 @@
 __pycache__/***
 README.md
 rpi-sync
+Pipfile
+Pipfile.lock
+*.ipynb
+google_cloud_credentials.json

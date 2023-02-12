@@ -3,9 +3,9 @@
 set -e
 
 if [[ "$1" =~ ^-.* ]]; then
-	ip="${2:-pi.local}"
+	ip="${2:-veemon}"
 else
-	ip="${1:-pi.local}"
+	ip="${1:-veemon}"
 fi
 
 if ! ping -c 1 $ip > /dev/null 2> /dev/null; then
@@ -18,6 +18,6 @@ echo "Starting sync ..."
 ssh pi@"${ip}" "mkdir -p /home/pi/virtuo"
 rsync -P -a --delete -e ssh --exclude-from=".rsync-exclude" . pi@"${ip}":/home/pi/virtuo
 ssh pi@"${ip}" "cd ~/virtuo && mv rpi_config.yml config.yml"
-ssh pi@"${ip}" "cd ~/virtuo && ~/.local/bin/pipenv sync"
+#ssh pi@"${ip}" "cd ~/virtuo && ~/.local/bin/pipenv sync"
 
 echo "Done"
