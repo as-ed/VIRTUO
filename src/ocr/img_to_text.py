@@ -13,7 +13,6 @@ from config import CFG
 def get_text(img: np.ndarray, book_loc: str, page_nr: int = 0, prev_sentence: str = "") -> Tuple[str, str]:
     """
     Converts image to text.
-
     :param img: image as a numpy array of RGB values
     :param book_loc: location where the digitized book is stored
     :param page_nr: number of the current page
