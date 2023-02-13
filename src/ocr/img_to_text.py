@@ -5,6 +5,7 @@ import numpy as np
 from PIL import Image
 import pytesseract
 import cv2
+from spellchecker import SpellChecker
 
 from config import CFG
 
@@ -12,7 +13,6 @@ from config import CFG
 def get_text(img: np.ndarray, book_loc: str, page_nr: int = 0, prev_sentence: str = "") -> Tuple[str, str]:
 	"""
 	Converts image to text.
-
 	:param img: image as a numpy array of RGB values
 	:param book_loc: location where the digitized book is stored
 	:param page_nr: number of the current page
@@ -56,10 +56,58 @@ def _ocr(img: Image) -> str:
 
 
 def _post_processing(text: str, prev_sentence: str) -> Tuple[str, str]:
-	# TODO:
-	#  - remove line breaks
-	#  - remove hyphens that split words
-	#  - extract last sentence
-	#  - autocorrect
-	#  - replace '|' (pipe) with 'I'
-	return prev_sentence + " " + text, ""
+	newText = ""
+	lastSentence = ""
+
+	# extract last sentence
+	for i in range(len(text) - 1, 0, -1):
+		if text[i] == ".":
+			lastSentence = text[(i + 1):]
+			text = text[:(i + 1)]
+			break
+
+	text = " \n" + prev_sentence + " " + text
+
+	# remove line breaks
+	# remove hyphens that split words
+	# replace '|' (pipe) with 'I'
+
+	for i in range(1, len(text)):
+		if text[i] == "\n":
+			if text[i - 1] == "-":
+				newText = newText[:-1]
+			else:
+				newText = newText + " "
+		elif text[i] == "|":
+			newText = newText + "I"
+		else:
+			newText = newText + text[i]
+
+	# autocorrect
+
+	newText = autoCorrect(newText, 0)
+
+	return newText, lastSentence
+
+
+def autoCorrect(text, language):  # language is just English for now, also removes all punctuation
+	spell = SpellChecker()
+	textArray = text.split(" ")
+	result = ""
+
+	for word in textArray:
+		if word == "":
+			continue
+		elif word[0].isupper() or (not word[len(word) - 1].isalpha()):
+			result = result + word + " "
+			continue
+		elif len(spell.unknown([word])) == 1:
+			w = spell.correction(word)
+			if w is not None:
+				result = result + w + " "
+			else:
+				result = result + word + " "
+		else:
+			result = result + word + " "
+
+	return result
