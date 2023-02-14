@@ -36,8 +36,8 @@ def _pre_processing(img: np.ndarray) -> Image:
 	_, binary = cv2.threshold(rotated, CFG["camera"]["black_threshold"], 255, cv2.THRESH_BINARY)
 
 	# Thicken the characters by eroding the surrounding white pixels
-	#kernel = np.ones((3, 3), np.uint8)
-	eroded = binary # cv2.erode(binary, kernel, iterations=1)
+	# kernel = np.ones((3, 3), np.uint8)
+	eroded = binary  # cv2.erode(binary, kernel, iterations=1)
 
 	# Apply noise removal (smoothen character edges)
 	denoised = cv2.fastNlMeansDenoising(eroded, None, 20, 7, 21)
@@ -66,7 +66,7 @@ def _post_processing(text: str, prev_sentence: str) -> Tuple[str, str]:
 			text = text[:(i + 1)]
 			break
 
-	text = " \n" + prev_sentence + " " + text
+	text = " \n" + prev_sentence + " " + text  # this might be wrong
 
 	# remove line breaks
 	# remove hyphens that split words
