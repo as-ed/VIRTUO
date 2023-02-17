@@ -1,0 +1,23 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <title>VIRTUO - home</title>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <link href="./static/style.css" rel="stylesheet">
+  </head>
+  <body>
+    <h1>VIRTUO homepage</h1>
+    <hr>
+    <h2>My Books</h2>
+    <table>
+    {% for book in books %}
+      <tr>
+        <td> {{book}} </td> 
+        <td><a href="books/{{book}}/book.txt">Download txt</a></td>
+        <td><a href="books/{{book}}/book.pdf">Download pdf</a></td>
+      </tr>
+    {% endfor %}
+    </table>
+  </body>
+</html>
