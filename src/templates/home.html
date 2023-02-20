@@ -12,6 +12,7 @@
   <body>
     <h1>VIRTUO Homepage</h1>
     <hr>
+<<<<<<< HEAD:src/templates/home.html
     <h2 class="heading">My Books</h2>
     <table>
     {% for book in books %}
@@ -23,6 +24,22 @@
       </tr>
     {% endfor %}
     </table>
+=======
+
+    {% if books|length > 0 %}
+      <h2 class="heading">My Books</h2>
+      <table>
+      {% for book in books %}
+        <tr>
+          <td> {{book}} </td> 
+          <td><a href="books/{{book}}/book.txt">Download txt</a></td>
+          <td><a href="books/{{book}}/book.pdf">Download pdf</a></td>
+          <td><a href="books/{{book}}/book.epub">Download epub</a></td>
+        </tr>
+      {% endfor %}
+      </table>
+    {% endif %}
+>>>>>>> cec40d4 (web: conditionally render \'My Books\' section, only if there are books to download):VIRTUO-WEB/templates/home.html
 
     <br>
 
