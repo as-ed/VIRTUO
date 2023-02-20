@@ -15,6 +15,7 @@ google-auth = "2.14.1"
 google-cloud-texttospeech = "==2.12.1"
 pyspellchecker = "==0.7.1"
 nltk = "==3.8.1"
+flask = "==2.2.3"
 
 [dev-packages]
 jupyter = "*"
