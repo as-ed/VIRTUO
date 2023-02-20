@@ -8,13 +8,25 @@ camera:
   black_threshold: 110
 audio:
   voices:
-    google_tts:
-      - name: Male 1
-        voice_name: en-GB-Standard-D
-        language: en-GB
-      - name: Female 1
-        voice_name: en-GB-Standard-C
-        language: en-GB
-    google_default: 0
-    google_speaking_rate: 1
+    - name: Male 1
+      voice_name: en-GB-Standard-D
+      language: en-GB
+      gender: male
+      offline: false
+    - name: Female 1
+      voice_name: en-GB-Standard-C
+      language: en-GB
+      gender: female
+      offline: false
+    - name: Male 2 (offline)
+      voice_name: ...
+      gender: male
+      offline: true
+    - name: Female 2 (offline)
+      voice_name: ...
+      gender: female
+      offline: true
+web:
+  host: 0.0.0.0
+  port: 80
 book_location: /home/pi/books

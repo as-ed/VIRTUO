@@ -16,10 +16,10 @@
     <table>
     {% for book in books %}
       <tr>
-        <td> {{book}} </td> 
-        <td><a href="books/{{book}}/book.txt">Download txt</a></td>
-        <td><a href="books/{{book}}/book.pdf">Download pdf</a></td>
-        <td><a href="books/{{book}}/book.epub">Download epub</a></td>
+        <td>{{book}}</td>
+        <td><a href="books/{{book}}/book.txt">Text</a></td>
+        <td><a href="books/{{book}}/book.pdf">PDF</a></td>
+        <td><a href="books/{{book}}/book.epub">EPUB</a></td>
       </tr>
     {% endfor %}
     </table>
