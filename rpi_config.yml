@@ -3,8 +3,8 @@ camera:
   right: 0
   width: 1920
   height: 1080
-  photo_delay: 1
-  focus: 20
+  photo_delay: 5
+  focus: 10
   black_threshold: 110
 audio:
   voices:
