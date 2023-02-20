@@ -1,4 +1,4 @@
-from flask import Flask, render_template, send_from_directory
+from flask import Flask, redirect, render_template, request, send_from_directory
 from markupsafe import escape
 #from werkzeug.middleware.proxy_fix import ProxyFix
 import os
@@ -47,3 +47,11 @@ def download_epub(filename):
     if not os.path.isfile('books/' + filename + '/book.epub'):
         os.system('pandoc --metadata title=' + filename.replace(' ', '\\ ') + ' -o books/' + filename.replace(' ', '\\ ') + '/book.epub books/' + filename.replace(' ', '\\ ') + '/book.txt')
     return send_from_directory('books/' + filename, 'book.epub')
+
+@app.route('/system/scan', methods=['GET','POST'])
+def begin_scan():
+    if request.method == 'POST':
+        print("scanning book!")
+        return '', 204
+    else:
+        return redirect('/', 307)
