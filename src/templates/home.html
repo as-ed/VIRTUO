@@ -26,7 +26,16 @@
 
     <br>
 
-    <audio controls>
-    </audio>  
+    <h2 class="heading">System Controls</h2>
+    <div class='controls'>
+      <button onclick="scan()">Scan Book</button>
+    </div>
+
   </body>
+  <script>
+  
+  function scan() {
+    fetch('system/scan', {method: 'POST'})
+  }
+  </script>
 </html>
