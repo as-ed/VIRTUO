@@ -34,7 +34,10 @@ def home():
 
 @app.route('/books/<filename>/book.txt')
 def download_txt(filename):
-    return send_from_directory('books/' + filename, 'book.txt')
+    if not os.path.isfile('books/' + filename + '/book.txt'):
+        return render_template('redirect.html')
+    else:
+        return send_from_directory('books/' + filename, 'book.txt')
 
 @app.route('/books/<filename>/book.pdf')
 def download_pdf(filename):
