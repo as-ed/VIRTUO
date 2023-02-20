@@ -5,19 +5,28 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <link href="./static/style.css" rel="stylesheet">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Karla&family=Source+Serif+Pro&display=swap" rel="stylesheet">
   </head>
   <body>
-    <h1>VIRTUO homepage</h1>
+    <h1>VIRTUO Homepage</h1>
     <hr>
-    <h2>My Books</h2>
+    <h2 class="heading">My Books</h2>
     <table>
     {% for book in books %}
       <tr>
         <td> {{book}} </td> 
         <td><a href="books/{{book}}/book.txt">Download txt</a></td>
         <td><a href="books/{{book}}/book.pdf">Download pdf</a></td>
+        <td><a href="books/{{book}}/book.epub">Download epub</a></td>
       </tr>
     {% endfor %}
     </table>
+
+    <br>
+
+    <audio controls>
+    </audio>  
   </body>
 </html>
