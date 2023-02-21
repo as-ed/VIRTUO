@@ -11,20 +11,16 @@ audio:
     - name: Male 1
       voice_name: en-GB-Standard-D
       language: en-GB
-      gender: male
       offline: false
     - name: Female 1
       voice_name: en-GB-Standard-C
       language: en-GB
-      gender: female
       offline: false
-    - name: Male 2 (offline)
-      voice_name: ...
-      gender: male
-      offline: true
     - name: Female 2 (offline)
-      voice_name: ...
-      gender: female
+      voice_name: en-GB
+      offline: true
+    - name: Female 3 (offline)
+      voice_name: en-US
       offline: true
 web:
   host: 0.0.0.0

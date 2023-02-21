@@ -33,7 +33,7 @@ def scan(play_audio: bool = False) -> bool:
 			page_nr = 0
 			cameras = (Camera.left, Camera.right)
 			last_sentence = ""
-			metadata_dict = {"pages": 0}
+			metadata_dict = {"scan_time": datetime.timestamp(datetime.now()), "pages": 0}
 
 			while not _stop_scan_event.is_set():
 				# OCR

@@ -32,7 +32,7 @@ class _TTS:
 
 		return audio
 
-	def synthesize_long(self, text: str) -> Generator[bytes]:
+	def synthesize_long(self, text: str) -> Generator[bytes, None, None]:
 		if len(text) <= 5000:
 			yield self.synthesize(text)
 			return

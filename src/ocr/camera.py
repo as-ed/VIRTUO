@@ -11,7 +11,7 @@ class Camera(Enum):
 
 
 def init_camera() -> None:
-	_start_capture(CFG["camera"]["init_time"]).release()
+	_start_capture(Camera.left, CFG["camera"]["init_time"]).release()
 
 
 def take_photo(camera: Camera) -> np.ndarray:
