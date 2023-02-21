@@ -1,13 +1,13 @@
 import os
+import re
 from typing import Tuple
 
+import cv2
+from nltk.tokenize import sent_tokenize
 import numpy as np
 from PIL import Image
 import pytesseract
-import cv2
 from spellchecker import SpellChecker
-
-from config import CFG
 
 
 def get_text(img: np.ndarray, book_loc: str, page_nr: int = 0, prev_sentence: str = "") -> Tuple[str, str]:
@@ -56,53 +56,60 @@ def _ocr(img: Image) -> str:
 
 
 def _post_processing(text: str, prev_sentence: str) -> Tuple[str, str]:
-	newText = ""
-	lastSentence = ""
+	# remove white space at start and end
+	new_text = re.sub(r"^\s*", "", text)
+	new_text = re.sub(r"\s*$", "", new_text)
+
+	# remove hyphens that split words
+	new_text = new_text.replace("-\n", "")
+
+	# remove single line breaks
+	new_text = re.sub("(^|[^\n])\n($|[^\n])", r"\1 \2", new_text)
+
+	# convert multi line break to single line break
+	new_text = re.sub("\n+", "\n", new_text)
+
+	# convert multi white space to single space
+	new_text = re.sub("[ \t]+", " ", new_text)
+
+	# convert "|" (pipe) to "I"
+	new_text = new_text.replace("|", "I")
+
+	# limit characters
+	new_text = re.sub("[\u201d\u201c]", '"', new_text)
+	new_text = re.sub("[\u2018\u2019]", "'", new_text)
+	new_text = re.sub("[^\\s\\w.,;'\"!?:&()-]", "", new_text)
+
+	# append previous sentence
+	if len(prev_sentence) > 0 and prev_sentence[-1] == "-":
+		new_text = prev_sentence[:-1] + new_text
+	else:
+		new_text = prev_sentence + " " + new_text
 
 	# extract last sentence
-	for i in range(len(text) - 1, 0, -1):
-		if text[i] == ".":
-			lastSentence = text[(i + 1):]
-			text = text[:(i + 1)]
-			break
-
-	text = " \n" + prev_sentence + " " + text
-
-	# remove line breaks
-	# remove hyphens that split words
-	# replace '|' (pipe) with 'I'
-
-	for i in range(1, len(text)):
-		if text[i] == "\n":
-			if text[i - 1] == "-":
-				newText = newText[:-1]
-			else:
-				newText = newText + " "
-		elif text[i] == "|":
-			newText = newText + "I"
-		else:
-			newText = newText + text[i]
+	sentences = sent_tokenize(new_text)
+	new_text = " ".join(sentences[:-1])
+	last_sentence = sentences[-1]
 
 	# autocorrect
+	new_text = _auto_correct(new_text)
 
-	newText = autoCorrect(newText, 0)
-
-	return newText, lastSentence
+	return new_text, last_sentence
 
 
-def autoCorrect(text, language):  # language is just English for now, also removes all punctuation
-	spell = SpellChecker()
-	textArray = text.split(" ")
+def _auto_correct(text):
+	spell_checker = SpellChecker()
+	text_array = text.split(" ")
 	result = ""
 
-	for word in textArray:
+	for word in text_array:
 		if word == "":
 			continue
 		elif word[0].isupper() or (not word[len(word) - 1].isalpha()):
 			result = result + word + " "
 			continue
-		elif len(spell.unknown([word])) == 1:
-			w = spell.correction(word)
+		elif len(spell_checker.unknown([word])) == 1:
+			w = spell_checker.correction(word)
 			if w is not None:
 				result = result + w + " "
 			else:
