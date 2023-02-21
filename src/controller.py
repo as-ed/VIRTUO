@@ -42,7 +42,7 @@ def scan(play_audio: bool = False) -> bool:
 
 				# TTS
 				if play_audio:
-					audio = tts(text)
+					audio = tts.synthesize(text)
 					if page_nr == 0:
 						_playing = True
 						player.play(audio, book_dir)

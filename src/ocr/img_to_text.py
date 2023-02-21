@@ -69,16 +69,16 @@ def _post_processing(text: str, prev_sentence: str) -> Tuple[str, str]:
 	# convert multi line break to single line break
 	new_text = re.sub("\n+", "\n", new_text)
 
-	# convert multi white space to single space
-	new_text = re.sub("[ \t]+", " ", new_text)
-
 	# convert "|" (pipe) to "I"
 	new_text = new_text.replace("|", "I")
 
 	# limit characters
 	new_text = re.sub("[\u201d\u201c]", '"', new_text)
 	new_text = re.sub("[\u2018\u2019]", "'", new_text)
-	new_text = re.sub("[^\\s\\w.,;'\"!?:&()-]", "", new_text)
+	new_text = re.sub("[^\\s\\w.,;'\"!?:&()-]", " ", new_text)
+
+	# convert multi white space to single space
+	new_text = re.sub("[ \t]+", " ", new_text)
 
 	# append previous sentence
 	if len(prev_sentence) > 0 and prev_sentence[-1] == "-":
