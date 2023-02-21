@@ -18,7 +18,6 @@ nltk = "==3.8.1"
 flask = "==2.2.3"
 ffmpeg-python = "==0.2.0"
 pydub = "==0.25.1"
-librosa = "==0.10.0"
 
 [dev-packages]
 jupyter = "*"

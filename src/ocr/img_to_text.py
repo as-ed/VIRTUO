@@ -75,6 +75,7 @@ def _post_processing(text: str, prev_sentence: str) -> Tuple[str, str]:
 	# limit characters
 	new_text = re.sub("[\u201d\u201c]", '"', new_text)
 	new_text = re.sub("[\u2018\u2019]", "'", new_text)
+	new_text = re.sub("[\u058a\u05be\u1806\u2010\u2011\u2012\u2013\u2014]", "-", new_text)
 	new_text = re.sub("[^\\s\\w.,;'\"!?:&()-]", " ", new_text)
 
 	# convert multi white space to single space

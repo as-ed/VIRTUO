@@ -47,13 +47,17 @@ class _AudioPlayer:
 	def stop(self) -> None:
 		self._player.stop()
 
+		print(1)
 		if self._current_book is not None:
+			print(2)
 			Thread(target=self.raw_to_mp3, args=(self._current_book,), daemon=True).start()
 
 		self._current_book = None
 
 	def raw_to_mp3(self, file: str) -> None:
-		ffmpeg.input(file, f="s16le", ar=_AudioPlayer._SAMPLE_RATE, ac=_AudioPlayer._CHANNELS).output(self._current_book[:-3] + "mp3.part").run(overwrite_output=True)
+		print(file)
+		ffmpeg.input(file, f="s16le", ar=_AudioPlayer._SAMPLE_RATE, ac=_AudioPlayer._CHANNELS).output(self._current_book[:-3] + "mp3.part", f="mp3").run(overwrite_output=True)
+		print(3)
 		shutil.move(file[:-3] + "mp3.part", file[:-3] + "mp3")
 
 	def rewind(self) -> None:

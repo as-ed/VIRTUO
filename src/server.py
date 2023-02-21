@@ -1,12 +1,17 @@
 import os
 
-from flask import Flask, redirect, render_template, request, send_from_directory
+from flask import Flask, redirect, render_template, request, send_from_directory, url_for
 
 from config import CFG
-from file_converter import create_epub, create_mp3, create_pdf
+from file_converter import create_epub, create_pdf
 
 
 server = Flask(__name__)
+
+
+@server.route("/favicon.ico")
+def favicon():
+	return send_from_directory(os.path.join(server.root_path, "static"), "favicon.ico")
 
 
 @server.get("/")

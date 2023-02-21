@@ -24,8 +24,8 @@ def scan(play_audio: bool = False) -> bool:
 
 		# create book directory
 		date = datetime.isoformat(datetime.now())[:10]
-		num = len(list(filter(lambda b: re.match(date + r"-(\d*)", b), os.listdir(CFG["book_location"])))) + 1
-		book_dir = os.path.join(CFG["book_location"], f"{date}-{num}")
+		num = len(list(filter(lambda b: re.match(date + r" - (\d*)", b), os.listdir(CFG["book_location"])))) + 1
+		book_dir = os.path.join(CFG["book_location"], f"{date} - {num}")
 		os.makedirs(book_dir)
 
 		# scan book
@@ -71,7 +71,7 @@ def scan(play_audio: bool = False) -> bool:
 
 		_scanning.release()
 		_playing = False
-		player.stop(book_dir)
+		player.stop()
 
 	if _scanning.acquire(False):
 		_stop_scan_event.clear()
