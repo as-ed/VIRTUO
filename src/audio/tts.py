@@ -1,7 +1,8 @@
-from typing import Optional, List
+from typing import Optional, List, Generator
 
 from google.oauth2 import service_account
 import google.cloud.texttospeech as gtts
+from nltk.tokenize import sent_tokenize
 import requests
 from requests import ConnectionError, Timeout
 
@@ -24,16 +25,26 @@ class _TTS:
 		Synthesizes speech from given text.
 
 		:param text: Text to synthesize, must not be longer than 5000 characters.
-		:return: The audio data
+		:return: Wave audio data.
 		"""
 		if self._offline or not self._test_connection() or (audio := self._gtts(text)) is None:
 			audio = self._picotts(text)
 
 		return audio
 
-	def synthesize_long(self, text: str) -> List[bytes]:
-		# TODO implement
-		pass
+	def synthesize_long(self, text: str) -> Generator[bytes]:
+		if len(text) <= 5000:
+			yield self.synthesize(text)
+			return
+
+		current_chunk = ""
+
+		for sentence in sent_tokenize(text):
+			while len(current_chunk) + len(sentence) <= 5000:
+				current_chunk += sentence
+
+			yield self.synthesize(current_chunk)
+			current_chunk = sentence
 
 	def _gtts(self, text: str) -> Optional[bytes]:
 		text_input = gtts.SynthesisInput(text=text)

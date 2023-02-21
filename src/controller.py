@@ -45,7 +45,7 @@ def scan(play_audio: bool = False) -> bool:
 					audio = tts(text)
 					if page_nr == 0:
 						_playing = True
-						player.play(audio, background=True)
+						player.play(audio, book_dir)
 					else:
 						player.add_audio(audio)
 
@@ -95,6 +95,14 @@ def set_volume(volume: float) -> bool:
 		return True
 	else:
 		return False
+
+
+def rewind() -> None:
+	player.rewind()
+
+
+def fast_forward() -> None:
+	player.fast_forward()
 
 
 def get_voices() -> List[str]:

@@ -2,6 +2,7 @@
 config.yml
 test.ipynb
 google_cloud_credentials.json
+loc.py
 
 # Byte-compiled / optimized / DLL files
 __pycache__/

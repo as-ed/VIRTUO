@@ -1,93 +1,66 @@
 import io
 import os
-from queue import SimpleQueue
-from typing import Union, List
+import shutil
+from threading import Thread
 
+import ffmpeg
 from mpv import MPV
-import numpy as np
-import soundfile as sf
-
-
-# TODO store MP3, rewind, fast-forward
+from pydub import AudioSegment
 
 
 class _AudioPlayer:
 	_DEFAULT_VOLUME = 0.5
-	_SENTINEL = object()
+	_SAMPLE_RATE = 24000
+	_CHANNELS = 1
 
 	def __init__(self) -> None:
 		self._player = MPV(ytdl=False)
-		self._stream = None
-		self._stream_queue = SimpleQueue()
-		self._current_playback = []
-		self._current_playback_rate = None
+		self._current_book = None
 
 		self.volume = _AudioPlayer._DEFAULT_VOLUME
 
-	def play(self, audio: Union[str, bytes], timestamp: float = 0, background: bool = True) -> None:
+	def play(self, audio: bytes, book: str) -> None:
 		self.stop()
-		self._stream_queue.put(_AudioPlayer._SENTINEL)
 		if self._player.pause:
 			self._player.cycle("pause")
 
-		if isinstance(audio, bytes):
-			if self._stream is not None:
-				self._stream.unregister()
+		self._current_book = os.path.join(book, "book.raw")
+		self.add_audio(audio, True)
 
-			self._stream_queue = SimpleQueue()
-			self.add_audio(audio)
+		self._player.loadfile(self._current_book, keep_open="", keep_open_pause="no", demuxer="rawaudio", demuxer_rawaudio_format="s16le", demuxer_rawaudio_channels=1, demuxer_rawaudio_rate=24000)
 
-			@self._player.python_stream("stream")
-			def stream() -> bytes:
-				while True:
-					if (frames := self._stream_queue.get()) == _AudioPlayer._SENTINEL:
-						return
+	def add_audio(self, audio: bytes, overwrite: bool = False) -> None:
+		self.write_to_raw_file(audio, self._current_book, overwrite)
 
-					with frames as f:
-						while data := f.read(1024**2):
-							yield data
-						yield b""
-						yield b""
+		if self._player.eof_reached:
+			self._player.seek(0)
 
-			self._stream = stream
-			audio_loc = "python://stream"
-		else:
-			audio_loc = audio
-
-		self._player.loadfile(audio_loc, keep_open="", keep_open_pause="no", no_video="", start=timestamp)
-
-		if not background:
-			self._player.wait_for_playback()
-
-	def add_audio(self, audio: bytes) -> None:
-		# encode audio as FLAC
-		data, rate = sf.read(io.BytesIO(audio))
-		audio_bytes = io.BytesIO()
-		sf.write(audio_bytes, data, samplerate=rate, format="FLAC")
-		audio_bytes.seek(0)
-		self._stream_queue.put(audio_bytes)
-
-		# store audio
-		self._current_playback.append(data)
-		self._current_playback_rate = rate
+	def write_to_raw_file(self, audio: bytes, file: str, overwrite: bool) -> None:
+		with open(file, "wb" if overwrite else "ab") as f:
+			AudioSegment.from_wav(io.BytesIO(audio)).set_channels(_AudioPlayer._CHANNELS).set_frame_rate(_AudioPlayer._SAMPLE_RATE).export(f, format="raw")
 
 	def play_pause(self) -> bool:
 		self._player.cycle("pause")
 
 		return not self._player.pause
 
-	def stop(self, store_audio_path: str = None) -> None:
+	def stop(self) -> None:
 		self._player.stop()
 
-		if store_audio_path is not None and self._current_playback != []:
-			sf.write(os.path.join(store_audio_path, "book.mp3"), np.concatenate(self._current_playback), samplerate=self._current_playback_rate, format="MP3")
+		if self._current_book is not None:
+			Thread(target=self.raw_to_mp3, args=(self._current_book,), daemon=True).start()
 
-		self._current_playback = []
+		self._current_book = None
 
-	def store_as_mp3(self, path: str, audio: List[bytes]):
-		_, rate = sf.read(io.BytesIO(audio[0]))
-		data = np.concatenate([sf.read(a)[0] for a in audio])
-		sf.write(os.path.join(path, "book.mp3"), data, samplerate=rate, format="MP3")
+	def raw_to_mp3(self, file: str) -> None:
+		ffmpeg.input(file, f="s16le", ar=_AudioPlayer._SAMPLE_RATE, ac=_AudioPlayer._CHANNELS).output(self._current_book[:-3] + "mp3.part").run(overwrite_output=True)
+		shutil.move(file[:-3] + "mp3.part", file[:-3] + "mp3")
+
+	def rewind(self) -> None:
+		self._player.seek(-10)
+
+	def fast_forward(self) -> None:
+		self._player.seek(10)
 
 	@property
 	def volume(self) -> float:
