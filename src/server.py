@@ -2,6 +2,7 @@ from flask import Flask, redirect, render_template, request, send_from_directory
 from markupsafe import escape
 #from werkzeug.middleware.proxy_fix import ProxyFix
 import os
+import controller
 
 app = Flask(__name__)
 
@@ -51,15 +52,23 @@ def download_epub(filename):
         os.system('pandoc --metadata title=' + filename.replace(' ', '\\ ') + ' -o books/' + filename.replace(' ', '\\ ') + '/book.epub books/' + filename.replace(' ', '\\ ') + '/book.txt')
     return send_from_directory('books/' + filename, 'book.epub')
 
-@app.route('/system/scan', methods=['GET','POST'])
+@app.route('/system/scan/start', methods=['GET','POST'])
 def begin_scan():
     if request.method == 'POST':
-        print("scanning book!")
-        return '', 204
+        scan = controller.scan()
+        return str(scan), 204
     else:
         return redirect('/', 307)
 
-@app.route('/system/volume', methods=['GET'])
+@app.route('/system/getVolume', methods=['GET'])
 def get_volume():
-    volume = 20
-    return volume
+   volume = 20 
+   return str(volume)
+
+@app.route('/system/setVolume/<val>', methods=['GET', 'POST'])
+def set_volume(val):
+    if request.method == 'POST':
+        volume = int(val) / 100
+        return str(controller.set_volume(volume))
+    else:
+        return redirect('/', 307)
