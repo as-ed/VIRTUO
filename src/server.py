@@ -58,3 +58,8 @@ def begin_scan():
         return '', 204
     else:
         return redirect('/', 307)
+
+@app.route('/system/volume', methods=['GET'])
+def get_volume():
+    volume = 20
+    return volume

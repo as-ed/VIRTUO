@@ -46,13 +46,19 @@
     <h2 class="heading">System Controls</h2>
     <div class='controls'>
       <button onclick="scan()">Scan Book</button>
+      <p id="volume">Volume: </p>
     </div>
 
   </body>
   <script>
-  
+  getVolume()
   function scan() {
     fetch('system/scan', {method: 'POST'})
+  }
+
+  function getVolume(){
+    volume = fetch('system/scan', {method:'GET'});
+    document.getElementById("volume").innerHTML = "Volume: " + volume;
   }
   </script>
 </html>
