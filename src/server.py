@@ -3,6 +3,7 @@ from markupsafe import escape
 #from werkzeug.middleware.proxy_fix import ProxyFix
 import os
 import controller
+import file_converter
 
 app = Flask(__name__)
 
@@ -42,15 +43,18 @@ def download_txt(filename):
 
 @app.route('/books/<filename>/book.pdf')
 def download_pdf(filename):
-    if not os.path.isfile('books/' + filename + '/book.pdf'):
-        os.system('pandoc -o books/' + filename.replace(' ', '\\ ') + '/book.pdf books/' + filename.replace(' ', '\\ ') + '/book.txt')
+    file_converter.create_pdf(filename)
     return send_from_directory('books/' + filename, 'book.pdf')
 
 @app.route('/books/<filename>/book.epub')
 def download_epub(filename):
-    if not os.path.isfile('books/' + filename + '/book.epub'):
-        os.system('pandoc --metadata title=' + filename.replace(' ', '\\ ') + ' -o books/' + filename.replace(' ', '\\ ') + '/book.epub books/' + filename.replace(' ', '\\ ') + '/book.txt')
+    file_converter.create_epub(filename)
     return send_from_directory('books/' + filename, 'book.epub')
+
+@app.route('/books/<filename>/book.mp3')
+def download_mp3(filename):
+    file_converter.create_mp3(filename)
+    return send_from_directory('books/' + filename, 'book.mp3')
 
 @app.route('/system/scan/start', methods=['GET','POST'])
 def begin_scan():
