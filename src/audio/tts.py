@@ -8,6 +8,10 @@ from requests import ConnectionError, Timeout
 
 from config import CFG
 
+from subprocess import call
+import wave
+import os
+
 
 class _TTS:
 
@@ -62,8 +66,20 @@ class _TTS:
 			return False
 
 	def _picotts(self, text: str) -> bytes:
-		# TODO add Pico TTS
-		pass
+
+		f = open("input.txt", "w")
+		f.write(text)
+		f.close()
+
+		call(["pico2wave -l en-GB -w output.wav \"" + text + "\""], shell=True)
+
+		while not os.path.exists("output.wav"):
+			time.sleep(5)
+
+		frames = wave.open("output.wav").readframes(100000000000000000)
+		os.remove("output.wav")
+
+		return frames
 
 	def set_voice(self, index: int) -> None:
 		self._voice = CFG["audio"]["voices"][index]["voice_name"]
