@@ -19,6 +19,15 @@ function setVolume(){
   fetch('/system/setVolume/' + document.getElementById("volume").value, {method: 'POST'})
 }
 
+function togglePause(){
+  fetch('/system/togglePause', {method: 'POST'})
+  .then((response) => response.text())
+  .then((text) => {
+    let playpause = (text === "False") ? "Play":"Pause";
+    document.getElementById("playpause").innerHTML = playpause
+  })
+}
+
 function setVoice(){
   fetch('/system/setVoice/' + document.getElementById("voiceSelect").value, {method: 'POST'})
 }

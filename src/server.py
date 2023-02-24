@@ -97,4 +97,12 @@ def stop_scan():
     else:
         return redirect('/', 307)
 
+@app.route('/system/togglePause', methods=['GET', 'POST'])
+def toggle_pause():
+    if request.method == 'POST':
+        response = str(controller.toggle_pause())
+        return response
+    else:
+        return redirect('/', 307)
+
 
