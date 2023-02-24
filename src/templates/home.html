@@ -39,6 +39,12 @@
         <input type="range" min="1" max="100" value="50" class="slider" id="volume" onchange="setVolume()">
         <i class='fa fa-volume-up' style='color: white'></i>
       </div>
+      <select name="voices" id="voiceSelect" onchange="setVoice()">
+        {% for voice in voices %}
+        <option value="{{voice}}"> {{voice}} </option>
+        {% endfor %}
+        <option selected value="{{currVoice}}"> {{currVoice}} </option>
+      </select>
     </div>
 
   </body>

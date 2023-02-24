@@ -14,3 +14,7 @@ function getVolume(){
 function setVolume(){
   fetch('/system/setVolume/' + document.getElementById("volume").value, {method: 'POST'})
 }
+
+function setVoice(){
+  fetch('/system/setVoice/' + document.getElementById("voiceSelect").value, {method: 'POST'})
+}
