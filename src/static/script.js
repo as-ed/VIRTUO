@@ -31,3 +31,12 @@ function togglePause(){
 function setVoice(){
   fetch('/system/setVoice/' + document.getElementById("voiceSelect").value, {method: 'POST'})
 }
+
+function fastforward() {
+  fetch('system/fast-forward', {method: 'POST'})
+}
+
+function rewind() {
+  fetch('system/rewind', {method: 'POST'})
+}
+

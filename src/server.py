@@ -105,4 +105,18 @@ def toggle_pause():
     else:
         return redirect('/', 307)
 
+@app.route('/system/fast-forward', methods=['GET', 'POST'])
+def fast_forward():
+    if request.method == 'POST':
+        controller.fast_forward()
+        return ''
+    else:
+        return redirect('/', 307)
 
+@app.route('/system/rewind', methods=['GET', 'POST'])
+def rewind():
+    if request.method == 'POST':
+        controller.rewind()
+        return ''
+    else:
+        return redirect('/', 307)

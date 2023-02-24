@@ -39,7 +39,9 @@
         <i class='fa-solid fa-volume-low' style='color: white'></i>
         <input type="range" min="1" max="100" value="50" class="slider" id="volume" onchange="setVolume()">
         <i class='fa fa-volume-up' style='color: white'></i>
+        <button onclick="rewind()">Rewind</button>
         <button onclick="togglePause()" id="playpause">Play</button>
+        <button onclick="fastforward()">Fast Forward</button>
       </div>
       <select name="voices" id="voiceSelect" onchange="setVoice()">
         {% for voice in voices %}
