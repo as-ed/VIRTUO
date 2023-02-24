@@ -33,7 +33,8 @@
 
     <h2 class="heading">System Controls</h2>
     <div class='controls'>
-      <button onclick="scan()">Scan Book</button>
+      <button onclick="startScan()">Scan Book</button>
+      <button onclick="stopScan()">Stop Scanning</button>
       <div> 
         <i class='fa-solid fa-volume-low' style='color: white'></i>
         <input type="range" min="1" max="100" value="50" class="slider" id="volume" onchange="setVolume()">

@@ -89,3 +89,12 @@ def set_voice(val):
             return ''
     else:
         return redirect('/', 307)
+
+@app.route('/system/scan/stop', methods=['GET', 'POST'])
+def stop_scan():
+    if request.method == 'POST':
+        return str(controller.stop_scan())
+    else:
+        return redirect('/', 307)
+
+

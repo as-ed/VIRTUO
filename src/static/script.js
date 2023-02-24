@@ -1,5 +1,9 @@
-function scan() {
+function startScan() {
   fetch('system/scan/start', {method: 'POST'})
+}
+
+function stopScan() {
+  fetch('system/scan/stop', {method: 'POST'})
 }
 
 function getVolume(){
