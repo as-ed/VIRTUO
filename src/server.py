@@ -42,22 +42,22 @@ def download_txt(filename):
     if not os.path.isfile('books/' + filename + '/book.txt'):
         return render_template('redirect.html')
     else:
-        return send_file('/Users/matthew/uni/year_3/sem2/SDP/VIRTUO/books/' + filename + '/book.txt')
+        return send_file('./books/' + filename + '/book.txt')
 
 @app.route('/books/<filename>/book.pdf')
 def download_pdf(filename):
     file_converter.create_pdf('books/' + filename)
-    return send_file('/Users/matthew/uni/year_3/sem2/SDP/VIRTUO/books/' + filename + '/book.pdf')
+    return send_file('./books/' + filename + '/book.pdf')
 
 @app.route('/books/<filename>/book.epub')
 def download_epub(filename):
     file_converter.create_epub('books/' + filename)
-    return send_file('/Users/matthew/uni/year_3/sem2/SDP/VIRTUO/books/' + filename + '/book.epub')
+    return send_file('./books/' + filename + '/book.epub')
 
 @app.route('/books/<filename>/book.mp3')
 def download_mp3(filename):
     file_converter.create_mp3('books/' + filename)
-    return send_file('/Users/matthew/uni/year_3/sem2/SDP/VIRTUO/books/' + filename + '/book.mp3')
+    return send_file('./books/' + filename + '/book.mp3')
 
 @app.route('/system/scan/start', methods=['GET','POST'])
 def begin_scan():
