@@ -1,4 +1,6 @@
-from typing import Optional, List, Generator
+from subprocess import run
+from tempfile import NamedTemporaryFile
+from typing import Optional, Generator
 
 from google.oauth2 import service_account
 import google.cloud.texttospeech as gtts
@@ -8,12 +10,10 @@ from requests import ConnectionError, Timeout
 
 from config import CFG
 
-from subprocess import call
-import wave
-import os
-
 
 class _TTS:
+
+	_DEFAULT_OFFLINE_VOICE_INDEX = 1		# voice to use when a Google Cloud TTS voice is chosen but the device is offline
 
 	def __init__(self) -> None:
 		self._voice = None
@@ -66,20 +66,14 @@ class _TTS:
 			return False
 
 	def _picotts(self, text: str) -> bytes:
+		with NamedTemporaryFile(suffix=".wav") as f:
+			run(["pico2wave",
+					"-l", self._voice if self._offline else CFG["audio"]["voices"][_TTS._DEFAULT_OFFLINE_VOICE_INDEX]["voice_name"],
+					"-w", f.name],
+				input=text.encode("utf8"))
 
-		f = open("input.txt", "w")
-		f.write(text)
-		f.close()
-
-		call(["pico2wave -l en-GB -w output.wav \"" + text + "\""], shell=True)
-
-		while not os.path.exists("output.wav"):
-			time.sleep(5)
-
-		frames = wave.open("output.wav").readframes(100000000000000000)
-		os.remove("output.wav")
-
-		return frames
+			f.seek(0)
+			return f.read()
 
 	def set_voice(self, index: int) -> None:
 		self._voice = CFG["audio"]["voices"][index]["voice_name"]
