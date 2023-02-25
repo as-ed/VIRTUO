@@ -20,10 +20,10 @@
       {% for book in books %}
         <tr>
           <td> {{book}} </td> 
-          <td><a href="books/{{book}}/book.txt">Download txt</a></td>
-          <td><a href="books/{{book}}/book.pdf">Download pdf</a></td>
-          <td><a href="books/{{book}}/book.epub">Download epub</a></td>
-          <td><a href="books/{{book}}/book.mp3">Download mp3</a></td>
+          <td><a href="books/{{book}}/book.txt" target="_blank">Text</a></td>
+          <td><a href="books/{{book}}/book.pdf" target="_blank">PDF</a></td>
+          <td><a href="books/{{book}}/book.epub" target="_blank">EPUB</a></td>
+          <td><a href="books/{{book}}/book.mp3" target="_blank">MP3</a></td>
         </tr>
       {% endfor %}
       </table>
@@ -41,7 +41,7 @@
         <i class='fa fa-volume-up' style='color: white'></i>
         <button onclick="rewind()">Rewind</button>
         <button onclick="togglePause()" id="playpause">Play</button>
-        <button onclick="fastforward()">Fast Forward</button>
+        <button onclick="fastForward()">Fast Forward</button>
       </div>
       <select name="voices" id="voiceSelect" onchange="setVoice()">
         {% for voice in voices %}
