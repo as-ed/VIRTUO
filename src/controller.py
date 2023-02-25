@@ -89,6 +89,10 @@ def toggle_pause() -> bool:
 	return player.play_pause() and _playing
 
 
+def get_volume() -> float:
+	return player.volume
+
+
 def set_volume(volume: float) -> bool:
 	if 0 <= volume <= 1:
 		player.volume = settings["volume"] = volume

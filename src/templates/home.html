@@ -4,29 +4,52 @@
     <title>VIRTUO - home</title>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
+    <script src="./static/script.js"></script>
     <link href="./static/style.css" rel="stylesheet">
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Karla&family=Source+Serif+Pro&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" integrity="sha512-9usAa10IRO0HhonpyAIVpjrylPvoDwiPUiKdWk5t3PyolY1cOd4DSE0Ga+ri4AuTroPR5aQvXU9xC6qOPnzFeg==" crossorigin="anonymous" referrerpolicy="no-referrer" />
   </head>
-  <body>
+  <body onload="getVolume()">
     <h1>VIRTUO Homepage</h1>
     <hr>
-    <h2 class="heading">My Books</h2>
-    <table>
-    {% for book in books %}
-      <tr>
-        <td>{{book}}</td>
-        <td><a href="books/{{book}}/book.txt">Text</a></td>
-        <td><a href="books/{{book}}/book.pdf">PDF</a></td>
-        <td><a href="books/{{book}}/book.epub">EPUB</a></td>
-      </tr>
-    {% endfor %}
-    </table>
+    {% if books|length > 0 %}
+      <h2 class="heading">My Books</h2>
+      <table>
+      {% for book in books %}
+        <tr>
+          <td> {{book}} </td> 
+          <td><a href="books/{{book}}/book.txt" target="_blank">Text</a></td>
+          <td><a href="books/{{book}}/book.pdf" target="_blank">PDF</a></td>
+          <td><a href="books/{{book}}/book.epub" target="_blank">EPUB</a></td>
+          <td><a href="books/{{book}}/book.mp3" target="_blank">MP3</a></td>
+        </tr>
+      {% endfor %}
+      </table>
+    {% endif %}
 
     <br>
 
-    <audio controls>
-    </audio>  
+    <h2 class="heading">System Controls</h2>
+    <div class='controls'>
+      <button onclick="startScan()">Scan Book</button>
+      <button onclick="stopScan()">Stop Scanning</button>
+      <div> 
+        <i class='fa-solid fa-volume-low' style='color: white'></i>
+        <input type="range" min="1" max="100" value="50" class="slider" id="volume" onchange="setVolume()">
+        <i class='fa fa-volume-up' style='color: white'></i>
+        <button onclick="rewind()">Rewind</button>
+        <button onclick="togglePause()" id="playpause">Play</button>
+        <button onclick="fastForward()">Fast Forward</button>
+      </div>
+      <select name="voices" id="voiceSelect" onchange="setVoice()">
+        {% for voice in voices %}
+        <option value="{{voice}}"> {{voice}} </option>
+        {% endfor %}
+        <option selected value="{{currVoice}}"> {{currVoice}} </option>
+      </select>
+    </div>
+
   </body>
 </html>
