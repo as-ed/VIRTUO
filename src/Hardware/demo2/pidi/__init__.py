@@ -1,6 +1,3 @@
-import RPi
-with RPi.GPIO as GPIO:
-    GPIO.setmode(GPIO.BCM)
-
+import util
 from button import Button
 
