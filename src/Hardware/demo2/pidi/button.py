@@ -1,4 +1,4 @@
-import RPi.GPIO as GPIO
+from util import *
 
 class Button:
     def __init__(self, pin):
