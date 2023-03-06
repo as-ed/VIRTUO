@@ -19,19 +19,82 @@ def get_text(img: np.ndarray, book_loc: str, page_nr: int = 0, prev_sentence: st
 	:param prev_sentence: last sentence of the previous page
 	:return: tuple of 2 strings: (page text except last sentence, last (potentially incomplete) sentence)
 	"""
-	page_img = _pre_processing(img)
+	main_body = _extract_main_body(img)
+	page_img = _pre_processing(main_body)
 	_save_img(page_img, book_loc, page_nr)
 
 	return _post_processing(_ocr(page_img), prev_sentence)
 
 
-def _pre_processing(img: np.ndarray) -> Image:
-	# Load the image into a CV2 object and convert it to grayscale
-	img = cv2.cvtColor(img, cv2.COLOR_BGR2GRAY)
+def _extract_main_body(img: np.ndarray) -> Image:
+    # Load the image into a CV2 object and convert it to grayscale
+    img = cv2.cvtColor(img, cv2.COLOR_BGR2GRAY)
 
 	# Rotate image by 90 degrees as camera returns a landscape orientation
-	rotated = cv2.rotate(img, cv2.ROTATE_90_COUNTERCLOCKWISE)
+    rotated = cv2.rotate(img, cv2.ROTATE_90_COUNTERCLOCKWISE)
 
+    # Apply soft blurring to get rid of noise
+    blur = cv2.GaussianBlur(rotated, (5, 3), 0)
+
+    # Erode slightly to enhance more of the text before binarisation
+    eroded = cv2.erode(blur, np.ones((2, 2), np.uint8), iterations=3)
+    _, binarised = cv2.threshold(eroded, 140, 255, cv2.THRESH_BINARY)
+
+    # Aggresively erode horizontally
+    eroded = cv2.erode(
+        binarised, cv2.getStructuringElement(cv2.MORPH_RECT, (5, 7)), iterations=3
+    )
+    eroded = cv2.erode(
+        eroded, cv2.getStructuringElement(cv2.MORPH_RECT, (5, 3)), iterations=1
+    )
+
+    # Binarise again but with a higher threshold
+    _, binarised = cv2.threshold(eroded, 150, 255, cv2.THRESH_BINARY)
+
+    # Extract Contours
+    contours, hierarchy = cv2.findContours(
+        binarised, cv2.RETR_TREE, cv2.CHAIN_APPROX_SIMPLE
+    )
+
+    real_contours = []
+    for contour in contours:
+        x, y, w, h = cv2.boundingRect(contour)
+
+        # Filter out irrelevant contours
+        if h / w > 8:
+            continue
+
+        if x < 0.05 * img.shape[1] or x + w > 0.95 * img.shape[1]:
+            continue
+
+        if y < 0.05 * img.shape[0] or y + h > 0.95 * img.shape[0]:
+            continue
+
+        if w * h < img.shape[0] * img.shape[1] * 0.01:
+            continue
+
+        real_contours.append(contour)
+
+    # Fill the outlined contour in white and add it to the mask
+    mask = np.ones(img.shape, dtype="uint8")
+    cv2.fillPoly(mask, pts=real_contours, color=(255, 255, 255))
+
+    # Use mask to only keep the main body of the page
+    masked = cv2.bitwise_and(img, mask)
+
+    # Now crop the black margins <- this reduces the file size.
+    _, thresh = cv2.threshold(masked, 150, 255, cv2.THRESH_BINARY)
+    page_coords = np.argwhere(thresh)
+    min_y = min(page_coords[:, 0])
+    min_x = min(page_coords[:, 1])
+    max_y = max(page_coords[:, 0])
+    max_x = max(page_coords[:, 1])
+
+    # Add a 5 pixel buffer as the crop is too tight
+    return masked[min_y - 5 : max_y + 5, min_x - 5 : max_x + 5]
+
+
+def _pre_processing(img: Image) -> Image:
 	# Binarize the image (Make each pixel either black or white based on a threshold)
 	#_, binary = cv2.threshold(rotated, CFG["camera"]["black_threshold"], 255, cv2.THRESH_BINARY)
 
@@ -42,7 +105,7 @@ def _pre_processing(img: np.ndarray) -> Image:
 	# Apply noise removal (smoothen character edges)
 	#denoised = cv2.fastNlMeansDenoising(eroded, None, 20, 7, 21)
 
-	return Image.fromarray(rotated)
+	return img
 
 
 def _save_img(img: Image, book_loc: str, page_nr: int) -> None:
