@@ -53,7 +53,7 @@ class _AudioPlayer:
 		self._current_book = None
 
 	def raw_to_mp3(self, file: str) -> None:
-		ffmpeg.input(file, f="s16le", ar=_AudioPlayer._SAMPLE_RATE, ac=_AudioPlayer._CHANNELS).output(self._current_book[:-3] + "mp3.part", f="mp3").run(overwrite_output=True)
+		ffmpeg.input(file, f="s16le", ar=_AudioPlayer._SAMPLE_RATE, ac=_AudioPlayer._CHANNELS).output(file[:-3] + "mp3.part", f="mp3").run(overwrite_output=True)
 		shutil.move(file[:-3] + "mp3.part", file[:-3] + "mp3")
 
 	def rewind(self) -> None:

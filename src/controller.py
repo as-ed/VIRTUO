@@ -34,6 +34,9 @@ def scan(play_audio: bool = False) -> bool:
 			cameras = (Camera.left, Camera.right)
 			last_sentence = ""
 			metadata_dict = {"scan_time": datetime.timestamp(datetime.now()), "pages": 0}
+			metadata.seek(0)
+			json.dump(metadata_dict, metadata)
+			metadata.flush()
 
 			while not _stop_scan_event.is_set():
 				# OCR
@@ -115,6 +118,23 @@ def get_voices() -> List[str]:
 
 def get_current_voice() -> str:
 	return settings["voice"] if "voice" in settings else CFG["audio"]["voices"][0]["name"]
+
+
+def set_book_attribute(book, attribute, value) -> bool:
+	if not os.path.isdir(os.path.join(CFG["book_location"], book)):
+		return False
+
+	path = os.path.join(CFG["book_location"], book, "metadata.json")
+
+	with open(path) as f:
+		metadata = json.load(f)
+
+	metadata[attribute] = value
+
+	with open(path, "w") as f:
+		json.dump(metadata, f)
+
+	return True
 
 
 def set_voice(voice: str) -> bool:

@@ -1,3 +1,6 @@
+from datetime import datetime
+import json
+from json import JSONDecodeError
 import os
 from typing import Union, Tuple
 
@@ -21,7 +24,31 @@ def home() -> str:
 	voices = cont.get_voices()
 	current_voice = cont.get_current_voice()
 	voices.remove(current_voice)
-	return render_template("home.html", books=os.listdir(CFG["book_location"]), voices=voices, currVoice=current_voice)
+
+	# load metadata of all books
+	books = []
+	for book_dir in os.scandir(CFG["book_location"]):
+		if not book_dir.is_dir():
+			continue
+
+		book = {"id": book_dir.name}
+
+		with open(os.path.join(book_dir.path, "metadata.json")) as f:
+			try:
+				metadata = json.load(f)
+			except JSONDecodeError:
+				continue
+
+			book["title"] = metadata["title"] if "title" in metadata else ""
+			book["author"] = metadata["author"] if "author" in metadata else ""
+			book["time"] = datetime.fromtimestamp(metadata["scan_time"])
+			book["pages"] = metadata["pages"]
+
+		books.append(book)
+
+	books.sort(key=lambda b: b["time"], reverse=True)
+
+	return render_template("home.html", books=books, voices=voices, currVoice=current_voice)
 
 
 @server.get("/books/<book>/book.txt")
@@ -47,7 +74,17 @@ def download_epub(book) -> Response:
 @server.route("/books/<book>/book.mp3")
 def download_mp3(book) -> Response:
 	conv.create_mp3(_get_path(book))
-	return send_from_directory(_get_path(book), "/book.mp3")
+	return send_from_directory(_get_path(book), "book.mp3")
+
+
+@server.post("/books/<book>/title")
+def set_title(book) -> Tuple[str, int]:
+	return ("", 200) if cont.set_book_attribute(book, "title", request.args["title"]) else ("", 400)
+
+
+@server.post("/books/<book>/author")
+def set_author(book) -> Tuple[str, int]:
+	return ("", 200) if cont.set_book_attribute(book, "author", request.args["author"]) else ("", 400)
 
 
 @server.route("/system/scan/start", methods=["GET", "POST"])

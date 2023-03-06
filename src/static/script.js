@@ -38,3 +38,11 @@ function fastForward() {
 function rewind() {
 	fetch('system/rewind', {method: 'POST'})
 }
+
+function setTitle(book, elem) {
+	fetch(`books/${book}/title?title=${elem.value}`, {method: "POST"})
+}
+
+function setAuthor(book, elem) {
+	fetch(`books/${book}/author?author=${elem.value}`, {method: "POST"})
+}

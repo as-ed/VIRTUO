@@ -1,37 +1,75 @@
 html {
-  background-color: #0D2C54;
+	background-color: #0D2C54;
 }
 
 body {
-  font-family: 'Karla', sans-serif;
-  text-align: center;
-  font-size: 20px;
+	font-family: 'Karla', sans-serif;
+	text-align: center;
+	font-size: 20px;
 }
 
 h1 {
-  font-family: 'Source Serif Pro', serif;
-  color: #E3B505;
-  text-align: left;
-  font-size: 50px;
+	font-family: 'Source Serif Pro', serif;
+	color: #E3B505;
+	text-align: center;
+	font-size: 50px;
+	margin-bottom: 10px;
+	letter-spacing: 3px;
+}
+
+.subtitle {
+	color: rgb(227, 181, 5, 0.75);
+	margin: 10px 0 20px 0;
+	font-size: 20px;
 }
 
 table {
-  background-color: #E8EEF2;
-  margin-left: auto;
-  margin-right: auto;
-  border-radius: 25px;
-  padding: 15px;
+	background-color: #E8EEF2;
+	margin-left: auto;
+	margin-right: auto;
+	border-radius: 25px;
+	padding: 15px;
+}
+
+td {
+	padding: 0 5px 0 5px;
+}
+
+thead {
+	font-size: 22px;
+	font-weight: bold;
+}
+
+input.metadata {
+	background: none;
+	border-top: none;
+	border-left: none;
+	border-right: none;
+	border-bottom: solid #777 2px;
+	font-family: 'Karla', sans-serif;
+	font-size: 20px;
+	width: 200px;
 }
 
 a:visited, a {
-  color: #56A3A6;
+	color: #56A3A6;
 }
 
 a:hover {
-  color: #DB504A;
+	color: #DB504A;
 }
 
 .heading {
-  color: #E8EEF2;
-  font-size: 40px;
+	color: #E8EEF2;
+	font-size: 40px;
+}
+
+audio {
+	width: 270px;
+}
+
+@media only screen and (max-width: 768px) {
+	.subtitle {
+		display: none;
+	}
 }

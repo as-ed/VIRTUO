@@ -44,16 +44,19 @@ class _TTS:
 		current_chunk = ""
 
 		for sentence in sent_tokenize(text):
-			while len(current_chunk) + len(sentence) <= 5000:
+			if len(current_chunk) + len(sentence) <= 5000:
 				current_chunk += sentence
+				continue
 
 			yield self.synthesize(current_chunk)
 			current_chunk = sentence
 
+		yield self.synthesize(current_chunk)
+
 	def _gtts(self, text: str) -> Optional[bytes]:
 		text_input = gtts.SynthesisInput(text=text)
 		try:
-			response = self._gtts_client.synthesize_speech(input=text_input, voice=self._gtts_voice_params, audio_config=self._gtts_audio_config, timeout=10)
+			response = self._gtts_client.synthesize_speech(input=text_input, voice=self._gtts_voice_params, audio_config=self._gtts_audio_config, timeout=60)
 			return response.audio_content
 		except Exception:
 			pass
