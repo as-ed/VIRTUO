@@ -65,6 +65,27 @@
 			{% endfor %}
 			</tbody>
 		</table>
+
+		{% for book in books %}
+		<div class="mobile-book">
+			<input type="text" class="metadata" id="title_{{book["id"]}}" value="{{book["title"]}}" placeholder="Enter title" oninput="setTitle('{{book["id"]}}', this)">
+			<br>
+			<input type="text" class="metadata" id="author_{{book["id"]}}" value="{{book["author"]}}" placeholder="Enter author" oninput="setAuthor('{{book["id"]}}', this)">
+			<br>
+			# Pages: {{book["pages"]}}
+			<br>
+			Scanned at: {{book["time"].strftime("%Y-%m-%d\u00a0\u00a0\u00a0%H:%M")}}
+			<br>
+			Downloads:
+			<a href="books/{{book["id"]}}/book.txt" target="_blank" download>Text</a>
+			<a href="books/{{book["id"]}}/book.pdf" target="_blank">PDF</a>
+			<a href="books/{{book["id"]}}/book.epub" target="_blank">EPUB</a>
+			<a href="books/{{book["id"]}}/book.mp3" target="_blank" download>MP3</a>
+			<br>
+			<audio controls preload="none" src="books/{{book["id"]}}/book.mp3"></audio>
+		</div>
+	{% endfor %}
+
 		{% endif %}
 
 		<br>
