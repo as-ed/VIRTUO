@@ -74,6 +74,14 @@ audio {
 	display: none;
 }
 
+.controls {
+	background-color: #E8EEF2;
+	margin-left: auto;
+	margin-right: auto;
+	border-radius: 25px;
+	padding: 15px;
+}
+
 @media only screen and (max-width: 768px) {
 	.subtitle {
 		display: none;

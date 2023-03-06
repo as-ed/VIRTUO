@@ -18,16 +18,19 @@
 
 		<h2 class="heading">System Controls</h2>
 		<div class='controls'>
-			<button onclick="startScan()">Scan Book</button>
-			<button onclick="stopScan()">Stop Scanning</button>
+			Scan Book <a onclick="startScan()"><i class="fa-solid fa-book-open-reader"></i></a>
+			<br>
+			Stop Scanning <a onclick="stopScan()"><i class="fa-solid fa-stop"></i></a>
+			<br>
 			<div>
-				<i class='fa-solid fa-volume-low' style='color: white'></i>
+				<i class='fa-solid fa-volume-low' style='color: #DB504A'></i>
 				<input type="range" min="1" max="100" value="50" class="slider" id="volume" onchange="setVolume()">
-				<i class='fa fa-volume-up' style='color: white'></i>
-				<button onclick="rewind()">Rewind</button>
-				<button onclick="togglePause()" id="playpause">Play</button>
-				<button onclick="fastForward()">Fast Forward</button>
+				<i class='fa-solid fa-volume-up' style='color: #DB504A'></i>
+				<a onclick="rewind()"><i class="fa-solid fa-backward"></i></a>
+				<a onclick="togglePause()" id="playpause"><i class="fa-solid fa-play"></i></a>
+				<a onclick="fastForward()"><i class="fa-solid fa-forward"></i></a>
 			</div>
+			Choose voice:
 			<select name="voices" id="voiceSelect" onchange="setVoice()">
 				{% for voice in voices %}
 				<option value="{{voice}}"> {{voice}} </option>
