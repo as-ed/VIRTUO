@@ -23,7 +23,7 @@ function togglePause(){
 	fetch('/system/togglePause', {method: 'POST'})
 		.then((response) => response.text())
 		.then((text) => {
-			document.getElementById("playpause").innerHTML = (text === "False") ? "Play" : "Pause"
+			document.getElementById("playpause").innerHTML = (text === "False") ? "<i class='fa-solid fa-play'  style='color: #DB504A'></i>" : "<i class='fa-solid fa-pause'  style='color: #DB504A'></i>"
 		})
 }
 

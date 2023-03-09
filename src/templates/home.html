@@ -15,6 +15,30 @@
 		<h1>VIRTUO</h1>
 		<h4 class="subtitle">Visual Impairment Reading Technology Utilizing Outspoken language</h4>
 		<hr>
+
+		<h2 class="heading">System Controls</h2>
+		<div class='controls'>
+			Scan Book <a onclick="startScan()"><i class="fa-solid fa-book-open-reader"></i></a>
+			<br>
+			Stop Scanning <a onclick="stopScan()"><i class="fa-solid fa-stop"></i></a>
+			<br>
+			<div>
+				<i class='fa-solid fa-volume-low' style='color: #DB504A'></i>
+				<input type="range" min="1" max="100" value="50" class="slider" id="volume" onchange="setVolume()">
+				<i class='fa-solid fa-volume-up' style='color: #DB504A'></i>
+				<a onclick="rewind()"><i class="fa-solid fa-backward"></i></a>
+				<a onclick="togglePause()" id="playpause"><i class="fa-solid fa-play"></i></a>
+				<a onclick="fastForward()"><i class="fa-solid fa-forward"></i></a>
+			</div>
+			Choose voice:
+			<select name="voices" id="voiceSelect" onchange="setVoice()">
+				{% for voice in voices %}
+				<option value="{{voice}}"> {{voice}} </option>
+				{% endfor %}
+				<option selected value="{{currVoice}}"> {{currVoice}} </option>
+			</select>
+		</div>
+
 		{% if books|length > 0 %}
 		<h2 class="heading">My Books</h2>
 		<table>
@@ -44,28 +68,30 @@
 			{% endfor %}
 			</tbody>
 		</table>
+
+		{% for book in books %}
+		<div class="mobile-book">
+			<input type="text" class="metadata" id="title_{{book["id"]}}" value="{{book["title"]}}" placeholder="Enter title" oninput="setTitle('{{book["id"]}}', this)">
+			<br>
+			<input type="text" class="metadata" id="author_{{book["id"]}}" value="{{book["author"]}}" placeholder="Enter author" oninput="setAuthor('{{book["id"]}}', this)">
+			<br>
+			# Pages: {{book["pages"]}}
+			<br>
+			Scanned at: {{book["time"].strftime("%Y-%m-%d\u00a0\u00a0\u00a0%H:%M")}}
+			<br>
+			Downloads:
+			<a href="books/{{book["id"]}}/book.txt" target="_blank" download>Text</a>
+			<a href="books/{{book["id"]}}/book.pdf" target="_blank">PDF</a>
+			<a href="books/{{book["id"]}}/book.epub" target="_blank">EPUB</a>
+			<a href="books/{{book["id"]}}/book.mp3" target="_blank" download>MP3</a>
+			<br>
+			<audio controls preload="none" src="books/{{book["id"]}}/book.mp3"></audio>
+		</div>
+	{% endfor %}
+
 		{% endif %}
 
 		<br>
 
-		<h2 class="heading">System Controls</h2>
-		<div class='controls'>
-			<button onclick="startScan()">Scan Book</button>
-			<button onclick="stopScan()">Stop Scanning</button>
-			<div>
-				<i class='fa-solid fa-volume-low' style='color: white'></i>
-				<input type="range" min="1" max="100" value="50" class="slider" id="volume" onchange="setVolume()">
-				<i class='fa fa-volume-up' style='color: white'></i>
-				<button onclick="rewind()">Rewind</button>
-				<button onclick="togglePause()" id="playpause">Play</button>
-				<button onclick="fastForward()">Fast Forward</button>
-			</div>
-			<select name="voices" id="voiceSelect" onchange="setVoice()">
-				{% for voice in voices %}
-				<option value="{{voice}}"> {{voice}} </option>
-				{% endfor %}
-				<option selected value="{{currVoice}}"> {{currVoice}} </option>
-			</select>
-		</div>
 	</body>
 </html>

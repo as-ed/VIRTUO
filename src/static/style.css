@@ -13,8 +13,10 @@ h1 {
 	color: #E3B505;
 	text-align: center;
 	font-size: 50px;
+	padding-top: 10px;
 	margin-bottom: 10px;
 	letter-spacing: 3px;
+	margin: auto;
 }
 
 .subtitle {
@@ -68,8 +70,33 @@ audio {
 	width: 270px;
 }
 
+.mobile-book {
+	display: none;
+}
+
+.controls {
+	background-color: #E8EEF2;
+	margin-left: auto;
+	margin-right: auto;
+	border-radius: 25px;
+	padding: 15px;
+}
+
 @media only screen and (max-width: 768px) {
 	.subtitle {
 		display: none;
+	}
+
+	table {
+		display: none;
+	}
+
+	.mobile-book {
+		display: inherit;
+		margin: 5px;
+		padding: 5px;
+		border-radius: 25px;
+		background: #E8EEF2;
+		line-height: 30px;
 	}
 }
