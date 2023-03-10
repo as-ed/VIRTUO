@@ -8,19 +8,21 @@ camera:
   black_threshold: 110
 audio:
   voices:
-    - name: Male 1
-      voice_name: en-GB-Standard-D
-      language: en-GB
-      offline: false
     - name: Female 1
       voice_name: en-GB-Standard-C
       language: en-GB
       offline: false
     - name: Female 2 (offline)
       voice_name: en-GB
+      language: en-GB
       offline: true
+    - name: Male 1
+      voice_name: en-GB-Standard-D
+      language: en-GB
+      offline: false
     - name: Female 3 (offline)
       voice_name: en-US
+      language: en-US
       offline: true
 web:
   host: 0.0.0.0

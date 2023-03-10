@@ -14,9 +14,13 @@ h1 {
 	text-align: center;
 	font-size: 50px;
 	padding-top: 10px;
-	margin-bottom: 10px;
 	letter-spacing: 3px;
 	margin: auto;
+}
+
+hr {
+	color: rgba(227,181,5,0.51);
+	border-style: solid;
 }
 
 .subtitle {

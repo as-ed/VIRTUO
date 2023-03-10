@@ -1,7 +1,7 @@
 <!DOCTYPE html>
 <html lang="en">
 	<head>
-		<title>VIRTUO - home</title>
+		<title>VIRTUO</title>
 		<meta charset="UTF-8">
 		<meta name="viewport" content="width=device-width, initial-scale=1">
 		<script src="static/script.js"></script>
@@ -17,7 +17,7 @@
 		<hr>
 
 		<h2 class="heading">System Controls</h2>
-		<div class='controls'>
+		<div class="controls">
 			Scan Book <a onclick="startScan()"><i class="fa-solid fa-book-open-reader"></i></a>
 			<br>
 			Stop Scanning <a onclick="stopScan()"><i class="fa-solid fa-stop"></i></a>
@@ -87,11 +87,8 @@
 			<br>
 			<audio controls preload="none" src="books/{{book["id"]}}/book.mp3"></audio>
 		</div>
-	{% endfor %}
-
+		{% endfor %}
 		{% endif %}
-
-		<br>
-
+		<br><br>
 	</body>
 </html>
