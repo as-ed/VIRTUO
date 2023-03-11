@@ -28,7 +28,9 @@ function togglePause(){
 }
 
 function setVoice(){
-	fetch('/system/setVoice/' + document.getElementById("voiceSelect").value, {method: 'POST'})
+	const voice = document.getElementById("voiceSelect").value
+	document.getElementById("voice-sample").src = "system/voiceSample/" + voice
+	fetch('/system/setVoice/' + voice, {method: 'POST'})
 }
 
 function fastForward() {
@@ -39,10 +41,12 @@ function rewind() {
 	fetch('system/rewind', {method: 'POST'})
 }
 
-function setTitle(book, elem) {
+function setTitle(book, elem, mobile) {
+	document.getElementById(mobile ? elem.id.substring(0, elem.id.length - 7) : elem.id + "_mobile").value = elem.value
 	fetch(`books/${book}/title?title=${elem.value}`, {method: "POST"})
 }
 
-function setAuthor(book, elem) {
+function setAuthor(book, elem, mobile) {
+	document.getElementById(mobile ? elem.id.substring(0, elem.id.length - 7) : elem.id + "_mobile").value = elem.value
 	fetch(`books/${book}/author?author=${elem.value}`, {method: "POST"})
 }

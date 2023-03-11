@@ -111,7 +111,7 @@ def get_volume() -> str:
 
 
 @server.route("/system/setVolume/<value>", methods=["GET", "POST"])
-def set_volume(value) -> Union[str, Response]:
+def set_volume(value: str) -> Union[str, Response]:
 	if request.method == "POST":
 		return str(cont.set_volume(int(value) / 100))
 	else:
@@ -119,11 +119,16 @@ def set_volume(value) -> Union[str, Response]:
 
 
 @server.route("/system/setVoice/<value>", methods=["GET", "POST"])
-def set_voice(value) -> Union[str, Response]:
+def set_voice(value: str) -> Union[str, Response]:
 	if request.method == "POST":
 		return str(cont.set_voice(value))
 	else:
 		return redirect("/", 307)
+
+
+@server.get("/system/voiceSample/<value>")
+def get_voice_sample(value: str) -> Response:
+	return send_from_directory(os.path.join(server.root_path, "static"), value + ".mp3")
 
 
 @server.route("/system/togglePause", methods=["GET", "POST"])
