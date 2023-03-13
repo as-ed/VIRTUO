@@ -19,25 +19,32 @@ class _AudioPlayer:
 
 		self.volume = _AudioPlayer._DEFAULT_VOLUME
 
-	def play(self, audio: bytes, book: str) -> None:
+	def play(self, audio: bytes, fmt: str, book: str, page: int = 0) -> None:
 		self.stop()
 		if self._player.pause:
 			self._player.cycle("pause")
 
-		self._current_book = os.path.join(book, "book.raw")
-		self.add_audio(audio, True)
+		self._current_book = os.path.join(book)
+		os.makedirs(self._current_book, exist_ok=True)
+		self.add_audio(audio, fmt, page)
 
-		self._player.loadfile(self._current_book, keep_open="", keep_open_pause="no", demuxer="rawaudio", demuxer_rawaudio_format="s16le", demuxer_rawaudio_channels=1, demuxer_rawaudio_rate=24000)
+		self._player.loadfile(os.path.join(self._current_book, "audio", "0.mp3"), keep_open="", keep_open_pause="no")
 
-	def add_audio(self, audio: bytes, overwrite: bool = False) -> None:
-		self.write_to_raw_file(audio, self._current_book, overwrite)
+	def add_audio(self, audio: bytes, fmt: str, page: int) -> None:
+		self.write_to_file(audio, fmt, self._current_book, page)
+		self._player.playlist_append(os.path.join(self._current_book, "audio", f"{page}.mp3"), keep_open="", keep_open_pause="no")
 
-		if self._player.eof_reached:
-			self._player.seek(0)
+	def write_to_file(self, audio: bytes, fmt: str, book: str, page: int) -> None:
+		path = os.path.join(book, "audio", f"{page}.mp3")
 
-	def write_to_raw_file(self, audio: bytes, file: str, overwrite: bool) -> None:
-		with open(file, "wb" if overwrite else "ab") as f:
-			AudioSegment.from_wav(io.BytesIO(audio)).set_channels(_AudioPlayer._CHANNELS).set_frame_rate(_AudioPlayer._SAMPLE_RATE).export(f, format="raw")
+		if fmt == "mp3":
+			with open(path, "wb") as f:
+				f.write(audio)
+		elif fmt == "wav":
+			with open(path, "wb") as f:
+				AudioSegment.from_wav(io.BytesIO(audio)).set_channels(_AudioPlayer._CHANNELS).set_frame_rate(_AudioPlayer._SAMPLE_RATE).export(f, format="mp3")
+		else:
+			raise Exception(f"invalid audio format \"{fmt}\"")
 
 	def play_pause(self) -> bool:
 		self._player.cycle("pause")
@@ -48,7 +55,7 @@ class _AudioPlayer:
 		self._player.stop()
 
 		if self._current_book is not None:
-			Thread(target=self.raw_to_mp3, args=(self._current_book,), daemon=True).start()
+			Thread(target=self.raw_to_mp3, args=(self._current_book,)).start()
 
 		self._current_book = None
 

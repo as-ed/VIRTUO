@@ -1,6 +1,6 @@
 from subprocess import run
 from tempfile import NamedTemporaryFile
-from typing import Optional, Generator
+from typing import Optional, Generator, Tuple
 
 from google.oauth2 import service_account
 import google.cloud.texttospeech as gtts
@@ -22,21 +22,23 @@ class _TTS:
 		self._gtts_voice_params = None
 		self.set_voice(0)
 		self._gtts_client = gtts.TextToSpeechClient(credentials=service_account.Credentials.from_service_account_info(CFG["credentials"]["google_cloud"]))
-		self._gtts_audio_config = gtts.AudioConfig(audio_encoding=gtts.AudioEncoding.LINEAR16)
+		self._gtts_audio_config = gtts.AudioConfig(audio_encoding=gtts.AudioEncoding.MP3)
 
-	def synthesize(self, text: str) -> bytes:
+	def synthesize(self, text: str) -> Tuple[bytes, str]:
 		"""
 		Synthesizes speech from given text.
 
 		:param text: Text to synthesize, must not be longer than 5000 characters.
-		:return: Wave audio data.
+		:return: Wave audio data and format (either "mp3" or "wav")
 		"""
+		fmt = "mp3"
 		if self._offline or not self._test_connection() or (audio := self._gtts(text)) is None:
 			audio = self._picotts(text)
+			fmt = "wav"
 
-		return audio
+		return audio, fmt
 
-	def synthesize_long(self, text: str) -> Generator[bytes, None, None]:
+	def synthesize_long(self, text: str) -> Generator[Tuple[bytes, str], None, None]:
 		if len(text) <= 5000:
 			yield self.synthesize(text)
 			return

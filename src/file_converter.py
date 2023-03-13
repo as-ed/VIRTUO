@@ -24,7 +24,7 @@ def create_mp3(book_path: str) -> None:
 		with open(os.path.join(book_path, "book.txt")) as f:
 			first = True
 			for chunk in tts.synthesize_long(f.read()):
-				player.write_to_raw_file(chunk, os.path.join(book_path, "book.raw"), first)
+				player.write_to_file(chunk, os.path.join(book_path, "book.raw"), first)
 				first = False
 
 			player.raw_to_mp3(os.path.join(book_path, "book.raw"))
