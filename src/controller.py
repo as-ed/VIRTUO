@@ -3,10 +3,10 @@ import json
 import os
 import re
 from threading import Thread, Event, Lock
-from typing import List
+from typing import List, Optional, Tuple
 
-from audio.audio_player import player
-from audio.tts import tts
+from audio.audio_player import AudioPlayer
+from audio.tts import TTS
 from config import CFG, settings
 from hw.flipper import flip_page
 from ocr.camera import Camera, take_photo
@@ -18,6 +18,68 @@ _playing = False
 _stop_scan_event = Event()
 
 
+class _Controller:
+
+	def __init__(self) -> None:
+		self._scanning = None
+		self._player = AudioPlayer(settings["volume"])
+		self._tts = TTS(settings["voice"], settings["offline_voice"])
+
+	def scan(self, listen: bool, book: str = None) -> Optional[Tuple[str, datetime]]:
+		return "abc", datetime.now()
+
+	@property
+	def scanning(self) -> Optional[str]:
+		return self._scanning
+
+	@property
+	def listening(self) -> bool:
+		return self._player.active
+
+	@property
+	def paused(self) -> bool:
+		return self._player.paused
+
+	@property
+	def volume(self) -> float:
+		return self._player.volume
+
+	@volume.setter
+	def volume(self, volume: float) -> float:
+		if volume < 0:
+			volume = 0
+		elif volume > 1:
+			volume = 1
+
+		self._player.volume = volume
+		settings["volume"] = volume
+
+		return volume
+
+	@property
+	def voice(self) -> str:
+		return CFG["audio"]["voices"][self._tts.voice]["name"]
+
+	@voice.setter
+	def voice(self, voice: str) -> None:
+		if (ids := [i for i, v in enumerate(CFG["audio"]["voices"]) if v["name"] == voice]) == []:
+			raise Exception(f"voice \"{voice}\" does not exist")
+
+		self._tts.voice = ids[0]
+		settings["voice"] = ids[0]
+
+		if CFG["audio"]["voices"][ids[0]]["offline"]:
+			self._tts.offline_voice = ids[0]
+			settings["offline_voice"] = ids[0]
+
+	@staticmethod
+	def get_voices() -> List[str]:
+		return [voice["name"] for voice in CFG["audio"]["voices"]]
+
+
+controller = _Controller()
+
+"""
 def scan(play_audio: bool = False) -> bool:
 	def scan() -> None:
 		global _playing
@@ -155,4 +217,4 @@ def restore_settings() -> None:
 
 
 def _get_voice_index(voice: str) -> int:
-	return [i for i, v in enumerate(CFG["audio"]["voices"]) if v["name"] == voice][0]
+	return [i for i, v in enumerate(CFG["audio"]["voices"]) if v["name"] == voice][0]"""

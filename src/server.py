@@ -2,13 +2,12 @@ from datetime import datetime
 import json
 from json import JSONDecodeError
 import os
-from time import sleep
 from typing import Union, Tuple
 
 from flask import Flask, redirect, render_template, request, send_from_directory, Response
 
 from config import CFG
-import controller as cont
+from controller import controller as cont
 import file_converter as conv
 
 
@@ -23,7 +22,7 @@ def favicon() -> Response:
 @server.get("/")
 def home() -> str:
 	voices = cont.get_voices()
-	current_voice = cont.get_current_voice()
+	current_voice = cont.voice
 	voices.remove(current_voice)
 
 	# load metadata of all books
@@ -49,7 +48,7 @@ def home() -> str:
 
 	books.sort(key=lambda b: b["time"], reverse=True)
 
-	return render_template("home.html", books=books, voices=voices, currVoice=current_voice)
+	return render_template("home.html", books=books, voices=voices, current_voice=current_voice, scanning=cont.scanning, listening=cont.listening, paused=cont.paused)
 
 
 @server.get("/books/<book>/book.txt")
@@ -85,30 +84,19 @@ def set_title(book) -> Tuple[str, int]:
 
 @server.post("/books/<book>/author")
 def set_author(book) -> Tuple[str, int]:
-	return ("", 200) if cont.set_book_attribute(book, "author", request.args["author"]) else ("", 400)
+	return ("", 204) if cont.set_book_attribute(book, "author", request.args["author"]) else ("", 400)
 
 
-@server.route("/system/scan/start", methods=["GET", "POST"])
-def begin_scan() -> Union[str, Response]:
-	if request.method == "POST":
-		scanning = cont.scan()
-		return str(scanning)
-	else:
-		return redirect("/", 307)
+@server.post("/system/scan/start")
+def start_scan() -> Tuple[str, int]:
+	book = cont.scan(request.args["listen"] == "true", request.args["book"] if "book" in request.args else None)
+	return ({"id": book[0], "time": book[1].strftime("%Y-%m-%d\u00a0\u00a0\u00a0%H:%M")}, 200) if book is not None else ("", 400)
 
 
-@server.route("/system/scan/stop", methods=["GET", "POST"])
-def stop_scan() -> Union[Tuple[str, int], Response]:
-	if request.method == "POST":
-		cont.stop_scan()
-		return "", 204
-	else:
-		return redirect("/", 307)
-
-
-@server.get("/system/getVolume")
-def get_volume() -> str:
-	return str(cont.get_volume())
+@server.post("/system/scan/stop")
+def stop_scan() -> Tuple[str, int]:
+	cont.stop_scan()
+	return "", 204
 
 
 @server.route("/system/setVolume/<value>", methods=["GET", "POST"])
@@ -156,6 +144,11 @@ def rewind() -> Union[str, Response]:
 		return ""
 	else:
 		return redirect("/", 307)
+
+
+@server.get("/fonts/<file>")
+def font(file: str) -> Response:
+	return send_from_directory(os.path.join(server.root_path, "static", "fonts"), file)
 
 
 def _get_path(book: str, file: str = None) -> str:

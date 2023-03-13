@@ -1,5 +1,4 @@
 from config import CFG
-from controller import restore_settings
 from ocr.camera import init_camera
 from server import server
 

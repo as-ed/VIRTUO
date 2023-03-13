@@ -30,6 +30,22 @@ h1 {
 	font-size: 20px;
 }
 
+.status-idle {
+	color: #bbb;
+}
+
+.status-active {
+	color: #FF6812;
+	animation: blink 2s linear infinite;
+	animation-timing-function: ease-out;
+}
+
+@keyframes blink {
+	50% {
+		opacity: 30%;
+	}
+}
+
 table {
 	background-color: #E8EEF2;
 	margin-left: auto;
@@ -77,6 +93,16 @@ a:hover {
 	cursor: pointer;
 }
 
+.inactive {
+	color: #666 !important;
+	pointer-events: none;
+}
+
+.inactive:hover {
+	color: #666 !important;
+	cursor: default !important;
+}
+
 .scan-control {
 	margin-right: 20px;
 }
@@ -85,7 +111,7 @@ a:hover {
 	margin-right: 10px;
 }
 
-.playback-controls {
+#playback-controls {
 	display: inline-block;
 }
 
@@ -101,11 +127,16 @@ a:hover {
 .heading {
 	color: #E8EEF2;
 	font-size: 40px;
+	margin-bottom: 20px;
 }
 
 audio.book-playback {
 	width: 270px;
 	height: 35px;
+}
+
+.current-scan {
+	color: #E15E10;
 }
 
 .mobile-book {
@@ -193,17 +224,15 @@ input[type="range"]:hover::-webkit-slider-thumb {
 	.controls {
 		padding: 15px 20px 15px 20px;
 	}
-}
 
-@media only screen and (max-width: 1230px) {
 	table {
 		display: none;
 	}
 
 	.mobile-book {
-		display: inherit;
-		margin: 5px;
-		padding: 15px;
+		display: table;
+		margin: 5px auto 5px auto;
+		padding: 15px 25px 15px 25px;
 		border-radius: 25px;
 		background: #E8EEF2;
 		line-height: 30px;
@@ -217,8 +246,9 @@ input[type="range"]:hover::-webkit-slider-thumb {
 		font-weight: bold;
 	}
 
-	audio.book-playback-mobile {
-		margin-bottom: -8px;
+	audio.book-playback {
+		width: 100%;
+		margin-bottom: 5px;
 	}
 }
 
@@ -239,7 +269,7 @@ input[type="range"]:hover::-webkit-slider-thumb {
 
 	.scan-control {
 		display: block;
-		margin-bottom: 10px;
+		margin: 0 0 10px 0;
 	}
 
 	.controls {
@@ -251,7 +281,7 @@ input[type="range"]:hover::-webkit-slider-thumb {
 		margin-left: 0;
 	}
 
-	.playback-controls {
+	#playback-controls {
 		display: block;
 		margin-bottom: 10px;
 	}
@@ -262,8 +292,51 @@ input[type="range"]:hover::-webkit-slider-thumb {
 	}
 }
 
-@media only screen and (max-width: 460px) {
-	audio.book-playback-mobile {
-		width: 100%;
+@media only screen and (max-width: 480px) {
+	.mobile-book {
+		margin: 5px;
+		padding: 15px;
 	}
+}
+
+/* karla-regular - latin */
+@font-face {
+  font-display: swap; /* Check https://developer.mozilla.org/en-US/docs/Web/CSS/@font-face/font-display for other options. */
+  font-family: 'Karla';
+  font-style: normal;
+  font-weight: 400;
+  src: url('/fonts/karla-v23-latin-regular.eot'); /* IE9 Compat Modes */
+  src: url('/fonts/karla-v23-latin-regular.eot?#iefix') format('embedded-opentype'), /* IE6-IE8 */
+       url('/fonts/karla-v23-latin-regular.woff2') format('woff2'), /* Super Modern Browsers */
+       url('/fonts/karla-v23-latin-regular.woff') format('woff'), /* Modern Browsers */
+       url('/fonts/karla-v23-latin-regular.ttf') format('truetype'), /* Safari, Android, iOS */
+       url('/fonts/karla-v23-latin-regular.svg#Karla') format('svg'); /* Legacy iOS */
+}
+
+/* karla-700 - latin */
+@font-face {
+  font-display: swap; /* Check https://developer.mozilla.org/en-US/docs/Web/CSS/@font-face/font-display for other options. */
+  font-family: 'Karla';
+  font-style: normal;
+  font-weight: 700;
+  src: url('/fonts/karla-v23-latin-700.eot'); /* IE9 Compat Modes */
+  src: url('/fonts/karla-v23-latin-700.eot?#iefix') format('embedded-opentype'), /* IE6-IE8 */
+       url('/fonts/karla-v23-latin-700.woff2') format('woff2'), /* Super Modern Browsers */
+       url('/fonts/karla-v23-latin-700.woff') format('woff'), /* Modern Browsers */
+       url('/fonts/karla-v23-latin-700.ttf') format('truetype'), /* Safari, Android, iOS */
+       url('/fonts/karla-v23-latin-700.svg#Karla') format('svg'); /* Legacy iOS */
+}
+
+/* source-serif-pro-regular - latin */
+@font-face {
+  font-display: swap; /* Check https://developer.mozilla.org/en-US/docs/Web/CSS/@font-face/font-display for other options. */
+  font-family: 'Source Serif Pro';
+  font-style: normal;
+  font-weight: 400;
+  src: url('/fonts/source-serif-pro-v15-latin-regular.eot'); /* IE9 Compat Modes */
+  src: url('/fonts/source-serif-pro-v15-latin-regular.eot?#iefix') format('embedded-opentype'), /* IE6-IE8 */
+       url('/fonts/source-serif-pro-v15-latin-regular.woff2') format('woff2'), /* Super Modern Browsers */
+       url('/fonts/source-serif-pro-v15-latin-regular.woff') format('woff'), /* Modern Browsers */
+       url('/fonts/source-serif-pro-v15-latin-regular.ttf') format('truetype'), /* Safari, Android, iOS */
+       url('/fonts/source-serif-pro-v15-latin-regular.svg#SourceSerifPro') format('svg'); /* Legacy iOS */
 }

@@ -11,16 +11,14 @@ from requests import ConnectionError, Timeout
 from config import CFG
 
 
-class _TTS:
+class TTS:
 
-	_DEFAULT_OFFLINE_VOICE_INDEX = 1		# voice to use when a Google Cloud TTS voice is chosen but the device is offline
-
-	def __init__(self) -> None:
-		self._voice = None
+	def __init__(self, voice: int, offline_voice: int) -> None:
 		self._language = None
 		self._offline = None
+		self.offline_voice = offline_voice
 		self._gtts_voice_params = None
-		self.set_voice(0)
+		self.voice = voice
 		self._gtts_client = gtts.TextToSpeechClient(credentials=service_account.Credentials.from_service_account_info(CFG["credentials"]["google_cloud"]))
 		self._gtts_audio_config = gtts.AudioConfig(audio_encoding=gtts.AudioEncoding.MP3)
 
@@ -73,20 +71,24 @@ class _TTS:
 	def _picotts(self, text: str) -> bytes:
 		with NamedTemporaryFile(suffix=".wav") as f:
 			run(["pico2wave",
-					"-l", self._voice if self._offline else CFG["audio"]["voices"][_TTS._DEFAULT_OFFLINE_VOICE_INDEX]["voice_name"],
+					"-l", self._voice_name if self._offline else CFG["audio"]["voices"][self._offline_voice]["voice_name"],
 					"-w", f.name],
 				input=text.encode("utf8"))
 
 			f.seek(0)
 			return f.read()
 
-	def set_voice(self, index: int) -> None:
-		self._voice = CFG["audio"]["voices"][index]["voice_name"]
+	@property
+	def voice(self) -> int:
+		return self._voice
+
+	@voice.setter
+	def voice(self, index: int) -> None:
+		self._voice = index
+		self._voice_name = CFG["audio"]["voices"][index]["voice_name"]
 		self._language = CFG["audio"]["voices"][index]["language"]
 		self._offline = CFG["audio"]["voices"][index]["offline"]
 
 		if not self._offline:
-			self._gtts_voice_params = gtts.VoiceSelectionParams(language_code=self._language, name=self._voice)
+			self._gtts_voice_params = gtts.VoiceSelectionParams(language_code=self._language, name=self._voice_name)
 
-
-tts = _TTS()

@@ -6,29 +6,31 @@
 		<meta name="viewport" content="width=device-width, initial-scale=1">
 		<script src="static/script.js"></script>
 		<link href="static/style.css" rel="stylesheet">
-		<link rel="preconnect" href="https://fonts.googleapis.com">
-		<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-		<link href="https://fonts.googleapis.com/css2?family=Karla&family=Source+Serif+Pro&display=swap" rel="stylesheet">
-		<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" integrity="sha512-9usAa10IRO0HhonpyAIVpjrylPvoDwiPUiKdWk5t3PyolY1cOd4DSE0Ga+ri4AuTroPR5aQvXU9xC6qOPnzFeg==" crossorigin="anonymous" referrerpolicy="no-referrer">
+		<link rel="stylesheet" href="static/fontawesome/css/all.min.css">
 	</head>
-	<body onload="getVolume()">
+	<body>
 		<div class="header">
 			<h1>VIRTUO</h1>
 			<h4 class="subtitle">Visual Impairment Reading Technology Utilizing Outspoken language</h4>
 		</div>
 
 		<h2 class="heading">System Controls</h2>
+		{% if scanning %}
+			<h3 id="scan-status" class="status-active">Scanning in progress ...</h3>
+		{% else %}
+			<h3 id="scan-status" class="status-idle">Scanner idle</h3>
+		{% endif %}
 		<div class="controls">
-			<a class="scan-control bold" onclick="startScan()">Scan & listen <i class="fa-solid fa-book-open-reader"></i></a>
-			<a class="scan-control bold" onclick="startScan()">Scan only <i class="fa-solid fa-book-open"></i></a>
-			<a class="bold" onclick="stopScan()">Stop scanning <i class="fa-solid fa-stop"></i></a>
+			<a id="scan-listen" class="scan-control bold {% if listening %}inactive{% endif %}" onclick="scan(true)">Scan & listen <i class="fa-solid fa-book-open-reader"></i></a>
+			<a id="scan-only" class="scan-control bold {% if scanning %}inactive{% endif %}" onclick="scan(false)">Scan only <i class="fa-solid fa-book-open"></i></a>
+			<a id="stop-scan" class="bold {% if not scanning %}inactive{% endif %}" onclick="stopScan()">Stop scanning <i class="fa-solid fa-stop"></i></a>
 
 			<hr class="vr">
 
-			<div class="playback-controls">
-				<a class="playback-control" onclick="rewind()"><i class="fa-solid fa-backward"></i></a>
-				<a class="playback-control" onclick="togglePause()" id="playpause"><i class="fa-solid fa-play"></i></a>
-				<a onclick="fastForward()"><i class="fa-solid fa-forward"></i></a>
+			<div id="playback-controls">
+				<a class="playback-control {% if not listening %}inactive{% endif %}" onclick="rewind()"><i class="fa-solid fa-backward"></i></a>
+				<a class="playback-control {% if not listening %}inactive{% endif %}" onclick="togglePause()" id="playpause"><i class="fa-solid {% if paused or not listening %}fa-play{% else %}fa-pause{% endif %}"></i></a>
+				<a class="{% if not listening %}inactive{% endif %}" onclick="fastForward()"><i class="fa-solid fa-forward"></i></a>
 			</div>
 			<a class="volume-down"><i class="fa-solid fa-volume-low"></i></a>
 			<input type="range" min="0" max="100" value="50" id="volume" onchange="setVolume()">
@@ -39,14 +41,14 @@
 			<div class="voice-select">
 				Select voice:
 				<select name="voices" id="voiceSelect" onchange="setVoice()">
-					<option selected value="{{currVoice}}">{{currVoice}}</option>
+					<option selected value="{{current_voice}}">{{current_voice}}</option>
 					{% for voice in voices %}
 					<option value="{{voice}}">{{voice}}</option>
 					{% endfor %}
 				</select>
 			</div>
 			Sample:
-			<audio id="voice-sample" controls src="system/voiceSample/{{currVoice}}"></audio>
+			<audio id="voice-sample" controls src="system/voiceSample/{{current_voice}}"></audio>
 		</div>
 
 		{% if books|length > 0 %}
@@ -62,11 +64,11 @@
 					<th>Playback</th>
 				</tr>
 			</thead>
-			<tbody>
+			<tbody id="books">
 			{% for book in books %}
-				<tr>
-					<td><input type="text" class="metadata" id="title_{{book["id"]}}" value="{{book["title"]}}" placeholder="Enter title" oninput="setTitle('{{book["id"]}}', this, false)"></td>
-					<td><input type="text" class="metadata" id="author_{{book["id"]}}" value="{{book["author"]}}" placeholder="Enter author" oninput="setAuthor('{{book["id"]}}', this, false)"></td>
+				<tr id="{{book["id"]}}">
+					<td><input type="text" class="metadata title" id="title_{{book["id"]}}" value="{{book["title"]}}" placeholder="Enter title" oninput="setTitle('{{book["id"]}}', this)"></td>
+					<td><input type="text" class="metadata author" id="author_{{book["id"]}}" value="{{book["author"]}}" placeholder="Enter author" oninput="setAuthor('{{book["id"]}}', this)"></td>
 					<td>{{book["pages"]}}</td>
 					<td>{{book["time"].strftime("%Y-%m-%d\u00a0\u00a0\u00a0%H:%M")}}</td>
 					<td><a href="books/{{book["id"]}}/book.txt" target="_blank" download>Text</a></td>
@@ -74,31 +76,38 @@
 					<td><a href="books/{{book["id"]}}/book.epub" target="_blank">EPUB</a></td>
 					<td><a href="books/{{book["id"]}}/book.mp3" target="_blank" download>MP3</a></td>
 					<td><audio class="book-playback" controls preload="none" src="books/{{book["id"]}}/book.mp3"></audio></td>
+					<td class="status_{{book["id"]}}">
+					{% if scanning == book["id"] %}
+						<span class="current-scan">Currently being scanned</span>
+					{% else %}
+						<a class="continue-scan bold {% if scanning %}inactive{% endif %}" onclick="scan(false, {{book["id"]}})">Continue scanning <i class="fa-solid fa-book-open"></i></a>
+					{% endif %}
+					</td>
 				</tr>
 			{% endfor %}
 			</tbody>
 		</table>
 
-		{% for book in books %}
-		<div class="mobile-book">
-			<div class="md-row">
-				<input type="text" class="metadata" id="title_{{book["id"]}}_mobile" value="{{book["title"]}}" placeholder="Enter title" oninput="setTitle('{{book["id"]}}', this, true)">
-				<input type="text" class="metadata" id="author_{{book["id"]}}_mobile" value="{{book["author"]}}" placeholder="Enter author" oninput="setAuthor('{{book["id"]}}', this, true)">
+		<div id="books_mobile">
+			{% for book in books %}
+			<div id="{{book["id"]}}_mobile" class="mobile-book">
+				<div id="{{book["id"]}}_mobile_title_author" class="md-row"></div>
+				<div class="md-row">
+					<span class="info">{{book["pages"]}}</span> page,
+					scanned at: <span class="info">{{book["time"].strftime("%Y-%m-%d\u00a0\u00a0\u00a0%H:%M")}}</span>
+				</div>
+				<div class="md-row">
+					Downloads:
+					<a href="books/{{book["id"]}}/book.txt" target="_blank" download>Text</a>
+					<a href="books/{{book["id"]}}/book.pdf" target="_blank">PDF</a>
+					<a href="books/{{book["id"]}}/book.epub" target="_blank">EPUB</a>
+					<a href="books/{{book["id"]}}/book.mp3" target="_blank" download>MP3</a>
+				</div>
+				<div id="{{book["id"]}}_mobile_audio"></div>
+				<div id="{{book["id"]}}_mobile_status"></div>
 			</div>
-			<div class="md-row">
-				<span class="info">{{book["pages"]}}</span> page,
-				scanned at: <span class="info">{{book["time"].strftime("%Y-%m-%d\u00a0\u00a0\u00a0%H:%M")}}</span>
-			</div>
-			<div class="md-row">
-				Downloads:
-				<a href="books/{{book["id"]}}/book.txt" target="_blank" download>Text</a>
-				<a href="books/{{book["id"]}}/book.pdf" target="_blank">PDF</a>
-				<a href="books/{{book["id"]}}/book.epub" target="_blank">EPUB</a>
-				<a href="books/{{book["id"]}}/book.mp3" target="_blank" download>MP3</a>
-			</div>
-			<audio class="book-playback-mobile" controls preload="none" src="books/{{book["id"]}}/book.mp3"></audio>
+			{% endfor %}
 		</div>
-		{% endfor %}
 		{% else %}
 		<h2 class="heading">Scanned books will appear here</h2>
 		{% endif %}

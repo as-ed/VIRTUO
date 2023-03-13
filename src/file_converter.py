@@ -1,8 +1,7 @@
 import json
 import os
 
-from audio.audio_player import player
-from audio.tts import tts
+from audio.tts import TTS
 
 
 def create_pdf(book_path: str) -> None:
@@ -20,11 +19,11 @@ def create_epub(book_path: str) -> None:
 
 
 def create_mp3(book_path: str) -> None:
-	if not os.path.isfile(os.path.join(book_path, "book.mp3")):
+	"""if not os.path.isfile(os.path.join(book_path, "book.mp3")):
 		with open(os.path.join(book_path, "book.txt")) as f:
 			first = True
 			for chunk in tts.synthesize_long(f.read()):
 				player.write_to_file(chunk, os.path.join(book_path, "book.raw"), first)
 				first = False
 
-			player.raw_to_mp3(os.path.join(book_path, "book.raw"))
+			player.raw_to_mp3(os.path.join(book_path, "book.raw"))"""
