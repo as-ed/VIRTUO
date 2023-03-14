@@ -5,10 +5,10 @@ from datetime import datetime
 
 class Motors(object):
 	def __init__(self):
-		print "Starting SMBus . . ."
+		print("Starting SMBus . . .")
 		self.bus = smbus.SMBus(1)
 		sleep(2)
-		print "SMBus Started."
+		print("SMBus Started.")
 		self.mc = MotorControl()
 		self.encoder_address = 0x05
 		self.encoder_register = 0x0
@@ -36,4 +36,4 @@ class Motors(object):
 	def print_encoder_data(self):
 		self.__i2c_read_encoder()
 		ts = str(datetime.now())
-		print self.encoder_data, ts.rjust(50,'.')
+		print(self.encoder_data, ts.rjust(50,'.'))
