@@ -8,4 +8,4 @@ class MotorPin:
         self.move(0)
 
     def move(self, speed):
-        mc.move_motor(self.pin, speed, self.board)
+        self.mc.move_motor(self.pin, speed, self.board)

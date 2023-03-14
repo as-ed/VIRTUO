@@ -1,4 +1,4 @@
-from util import *
+from gpioi.util import *
 
 class Button:
     def __init__(self, pin):
