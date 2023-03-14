@@ -1,4 +1,4 @@
-from fan import Fan
-from motor import Motor
-from fanGroup import FanGroup
+from devices.fan import Fan
+from devices.mainMotor import MainMotor
+from devices.fanGroup import FanGroup
 

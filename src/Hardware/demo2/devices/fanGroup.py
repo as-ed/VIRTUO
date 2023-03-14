@@ -1,4 +1,4 @@
-from fan import Fan
+from devices.fan import Fan
 
 class FanGroup:
     def __init__(self, mc, fan_pins):

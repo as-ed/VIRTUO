@@ -1,3 +1,3 @@
-import util
-from button import Button
+import gpioi.util
+from gpioi.button import Button
 
