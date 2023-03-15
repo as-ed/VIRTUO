@@ -32,9 +32,9 @@
 				<a class="playback-control {% if not listening %}inactive{% endif %}" onclick="togglePause()" id="playpause"><i class="fa-solid {% if paused or not listening %}fa-play{% else %}fa-pause{% endif %}"></i></a>
 				<a class="{% if not listening %}inactive{% endif %}" onclick="fastForward()"><i class="fa-solid fa-forward"></i></a>
 			</div>
-			<a class="volume-down"><i class="fa-solid fa-volume-low"></i></a>
-			<input type="range" min="0" max="100" value="50" id="volume" onchange="setVolume()">
-			<a><i class="fa-solid fa-volume-up"></i></a>
+			<a class="volume-down" onclick="volumeDown()"><i class="fa-solid fa-volume-low"></i></a>
+			<input type="range" min="0" max="100" value="{{volume * 100}}" id="volume" onchange="setVolume(this.value)">
+			<a><i class="fa-solid fa-volume-up" onclick="volumeUp()"></i></a>
 
 			<hr class="vr">
 
@@ -54,7 +54,7 @@
 		{% if books|length > 0 %}
 		<h2 class="heading">My Books</h2>
 		<table>
-			<thead>
+			<thead id="books-head">
 				<tr>
 					<th>Title</th>
 					<th>Author</th>
@@ -66,17 +66,17 @@
 			</thead>
 			<tbody id="books">
 			{% for book in books %}
-				<tr id="{{book["id"]}}">
-					<td><input type="text" class="metadata title" id="title_{{book["id"]}}" value="{{book["title"]}}" placeholder="Enter title" oninput="setTitle('{{book["id"]}}', this)"></td>
-					<td><input type="text" class="metadata author" id="author_{{book["id"]}}" value="{{book["author"]}}" placeholder="Enter author" oninput="setAuthor('{{book["id"]}}', this)"></td>
-					<td>{{book["pages"]}}</td>
-					<td>{{book["time"].strftime("%Y-%m-%d\u00a0\u00a0\u00a0%H:%M")}}</td>
-					<td><a href="books/{{book["id"]}}/book.txt" target="_blank" download>Text</a></td>
-					<td><a href="books/{{book["id"]}}/book.pdf" target="_blank">PDF</a></td>
-					<td><a href="books/{{book["id"]}}/book.epub" target="_blank">EPUB</a></td>
-					<td><a href="books/{{book["id"]}}/book.mp3" target="_blank" download>MP3</a></td>
+				<tr id="{{book["id"]}}" class="book">
+					<td class="md-row sm-row"><input type="text" class="metadata" id="title_{{book["id"]}}" value="{{book["title"]}}" placeholder="Enter title" oninput="setTitle('{{book["id"]}}', this)"></td>
+					<td class="md-row sm-row"><input type="text" class="metadata" id="author_{{book["id"]}}" value="{{book["author"]}}" placeholder="Enter author" oninput="setAuthor('{{book["id"]}}', this)"></td>
+					<td id="pages_{{book["id"]}}" class="md-row sm-row"><span class="mobile-bold">{{book["pages"]}}</span><span class="mobile-only"> page{% if book["pages"] != 1 %}s{% endif %}, scanned at </span></td>
+					<td class="md-row sm-row"><span class="mobile-bold">{{book["time"].strftime("%Y-%m-%d\u00a0\u00a0\u00a0%H:%M")}}</span></td>
+					<td class="md-row"><span class="mobile-only">Downloads: </span><a href="books/{{book["id"]}}/book.txt" target="_blank" download>Text</a></td>
+					<td class="md-row"><a href="books/{{book["id"]}}/book.pdf" target="_blank">PDF</a></td>
+					<td class="md-row"><a href="books/{{book["id"]}}/book.epub" target="_blank">EPUB</a></td>
+					<td class="md-row"><a href="books/{{book["id"]}}/book.mp3" target="_blank" download>MP3</a></td>
 					<td><audio class="book-playback" controls preload="none" src="books/{{book["id"]}}/book.mp3"></audio></td>
-					<td class="status_{{book["id"]}}">
+					<td id="status_{{book["id"]}}">
 					{% if scanning == book["id"] %}
 						<span class="current-scan">Currently being scanned</span>
 					{% else %}
@@ -87,27 +87,6 @@
 			{% endfor %}
 			</tbody>
 		</table>
-
-		<div id="books_mobile">
-			{% for book in books %}
-			<div id="{{book["id"]}}_mobile" class="mobile-book">
-				<div id="{{book["id"]}}_mobile_title_author" class="md-row"></div>
-				<div class="md-row">
-					<span class="info">{{book["pages"]}}</span> page,
-					scanned at: <span class="info">{{book["time"].strftime("%Y-%m-%d\u00a0\u00a0\u00a0%H:%M")}}</span>
-				</div>
-				<div class="md-row">
-					Downloads:
-					<a href="books/{{book["id"]}}/book.txt" target="_blank" download>Text</a>
-					<a href="books/{{book["id"]}}/book.pdf" target="_blank">PDF</a>
-					<a href="books/{{book["id"]}}/book.epub" target="_blank">EPUB</a>
-					<a href="books/{{book["id"]}}/book.mp3" target="_blank" download>MP3</a>
-				</div>
-				<div id="{{book["id"]}}_mobile_audio"></div>
-				<div id="{{book["id"]}}_mobile_status"></div>
-			</div>
-			{% endfor %}
-		</div>
 		{% else %}
 		<h2 class="heading">Scanned books will appear here</h2>
 		{% endif %}

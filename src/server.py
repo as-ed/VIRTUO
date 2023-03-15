@@ -22,37 +22,17 @@ def favicon() -> Response:
 @server.get("/")
 def home() -> str:
 	voices = cont.get_voices()
-	current_voice = cont.voice
-	voices.remove(current_voice)
+	voices.remove(cont.voice)
 
-	# load metadata of all books
-	books = []
-	for book_dir in os.scandir(CFG["book_location"]):
-		if not book_dir.is_dir():
-			continue
-
-		book = {"id": book_dir.name}
-
-		with open(os.path.join(book_dir.path, "metadata.json")) as f:
-			try:
-				metadata = json.load(f)
-			except JSONDecodeError:
-				continue
-
-			book["title"] = metadata["title"] if "title" in metadata else ""
-			book["author"] = metadata["author"] if "author" in metadata else ""
-			book["time"] = datetime.fromtimestamp(metadata["scan_time"])
-			book["pages"] = metadata["pages"]
-
-		books.append(book)
+	books = cont.books()
 
 	books.sort(key=lambda b: b["time"], reverse=True)
 
-	return render_template("home.html", books=books, voices=voices, current_voice=current_voice, scanning=cont.scanning, listening=cont.listening, paused=cont.paused)
+	return render_template("home.html", books=books, voices=voices, current_voice=cont.voice, scanning=cont.scanning, listening=cont.listening, paused=cont.paused, volume=cont.volume)
 
 
 @server.get("/books/<book>/book.txt")
-def download_txt(book) -> Union[str, Response]:
+def download_txt(book: str) -> Union[str, Response]:
 	if not os.path.isfile(_get_path(book, "book.txt")):
 		return render_template("redirect.html")
 	else:
@@ -60,31 +40,36 @@ def download_txt(book) -> Union[str, Response]:
 
 
 @server.get("/books/<book>/book.pdf")
-def download_pdf(book) -> Response:
+def download_pdf(book: str) -> Response:
 	conv.create_pdf(_get_path(book))
 	return send_from_directory(_get_path(book), "book.pdf")
 
 
 @server.route("/books/<book>/book.epub")
-def download_epub(book) -> Response:
+def download_epub(book: str) -> Response:
 	conv.create_epub(_get_path(book))
 	return send_from_directory(_get_path(book), "book.epub")
 
 
 @server.route("/books/<book>/book.mp3")
-def download_mp3(book) -> Response:
+def download_mp3(book: str) -> Response:
 	conv.create_mp3(_get_path(book))
 	return send_from_directory(_get_path(book), "book.mp3")
 
 
 @server.post("/books/<book>/title")
-def set_title(book) -> Tuple[str, int]:
+def set_title(book: str) -> Tuple[str, int]:
 	return ("", 200) if cont.set_book_attribute(book, "title", request.args["title"]) else ("", 400)
 
 
 @server.post("/books/<book>/author")
-def set_author(book) -> Tuple[str, int]:
+def set_author(book: str) -> Tuple[str, int]:
 	return ("", 204) if cont.set_book_attribute(book, "author", request.args["author"]) else ("", 400)
+
+
+@server.get("/books/<book>/lastPage")
+def get_last_page(book: str) -> Tuple[str, int]:
+	return cont.last_page(book), 200
 
 
 @server.post("/system/scan/start")
@@ -96,23 +81,19 @@ def start_scan() -> Tuple[str, int]:
 @server.post("/system/scan/stop")
 def stop_scan() -> Tuple[str, int]:
 	cont.stop_scan()
+	return ({"id": book[0], "pages": book[1]}, 200) if (book := cont.stop_scan()) is not None else ("", 400)
+
+
+@server.post("/system/setVolume/<value>")
+def set_volume(value: str) -> Tuple[str, int]:
+	cont.volume = int(value) / 100
+	return str(cont.volume * 100), 200
+
+
+@server.post("/system/setVoice/<value>")
+def set_voice(value: str) -> Tuple[str, int]:
+	cont.voice = value
 	return "", 204
-
-
-@server.route("/system/setVolume/<value>", methods=["GET", "POST"])
-def set_volume(value: str) -> Union[str, Response]:
-	if request.method == "POST":
-		return str(cont.set_volume(int(value) / 100))
-	else:
-		return redirect("/", 307)
-
-
-@server.route("/system/setVoice/<value>", methods=["GET", "POST"])
-def set_voice(value: str) -> Union[str, Response]:
-	if request.method == "POST":
-		return str(cont.set_voice(value))
-	else:
-		return redirect("/", 307)
 
 
 @server.get("/system/voiceSample/<value>")
@@ -120,30 +101,21 @@ def get_voice_sample(value: str) -> Response:
 	return send_from_directory(os.path.join(server.root_path, "static"), value + ".mp3")
 
 
-@server.route("/system/togglePause", methods=["GET", "POST"])
-def toggle_pause() -> Union[str, Response]:
-	if request.method == "POST":
-		return str(cont.toggle_pause())
-	else:
-		return redirect("/", 307)
+@server.post("/system/togglePause")
+def toggle_pause() -> Tuple[str, int]:
+	return str(cont.toggle_pause()), 200
 
 
 @server.route("/system/fastForward", methods=["GET", "POST"])
-def fast_forward() -> Union[str, Response]:
-	if request.method == "POST":
-		cont.fast_forward()
-		return ""
-	else:
-		return redirect("/", 307)
+def fast_forward() -> Tuple[str, int]:
+	cont.fast_forward()
+	return "", 204
 
 
-@server.route("/system/rewind", methods=["GET", "POST"])
-def rewind() -> Union[str, Response]:
-	if request.method == "POST":
-		cont.rewind()
-		return ""
-	else:
-		return redirect("/", 307)
+@server.post("/system/rewind")
+def rewind() -> Tuple[str, int]:
+	cont.rewind()
+	return "", 204
 
 
 @server.get("/fonts/<file>")
