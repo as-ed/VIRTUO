@@ -1,40 +1,59 @@
 import io
 import os
-import shutil
-from threading import Thread
+import re
+from tempfile import NamedTemporaryFile
 
 import ffmpeg
 from mpv import MPV
 from mutagen.mp3 import EasyMP3
 from pydub import AudioSegment
 
+from config import CFG
+
 
 class AudioPlayer:
+
 	_SAMPLE_RATE = 24000
 	_CHANNELS = 1
 
 	def __init__(self, volume: float) -> None:
 		self._player = MPV(ytdl=False)
 		self._current_book = None
+		self._playlist_duration = [0.0]
 
 		self.volume = volume
 
-	def play(self, audio: bytes, fmt: str, book: str, page: int = 0) -> None:
-		self.stop()
+	def play(self, book: str, pos: float = None) -> None:
+		self._player.stop()
 		if self._player.pause:
 			self._player.cycle("pause")
 
-		self._current_book = os.path.join(book)
-		os.makedirs(self._current_book, exist_ok=True)
-		self.add_audio(audio, fmt, page)
+		self._current_book = os.path.join(CFG["book_location"], book)
 
-		self._player.loadfile(os.path.join(self._current_book, "audio", "0.mp3"), keep_open="", keep_open_pause="no")
+		for mp3 in sorted(filter(lambda f: f.is_file(), os.scandir(os.path.join(self._current_book, "audio"))), key=lambda f: int(f.name[:-4])):
+			self._add_to_playlist(mp3.name)
 
-	def add_audio(self, audio: bytes, fmt: str, page: int) -> None:
+		if pos is not None:
+			self.seek(pos)
+
+	def add_audio(self, audio: bytes, fmt: str, page: int, play: bool) -> None:
 		self.write_to_file(audio, fmt, self._current_book, page)
-		self._player.playlist_append(os.path.join(self._current_book, "audio", f"{page}.mp3"), keep_open="", keep_open_pause="no")
+		self._add_to_playlist(f"{page}.mp3", play)
 
-	def write_to_file(self, audio: bytes, fmt: str, book: str, page: int) -> None:
+	def _add_to_playlist(self, file: str, play: bool = False) -> None:
+		path = os.path.join(self._current_book, "audio", file)
+
+		_, out = ffmpeg.input("../test/f1.mp3").output("-", f="null").run(capture_stderr=True)
+		match = re.search("time=(?P<hours>\\d{2}):(?P<minutes>\\d{2}):(?P<seconds>\\d{2}.\\d{2})[^\r]+$", out.decode())
+		self._playlist_duration.append(self._playlist_duration[-1] + 3600 * int(match["hours"]) + 60 * int(match["minutes"]) + float(match["seconds"]))
+
+		self._player.playlist_append(path, keep_open="", keep_open_pause="no")
+
+		if play and self._player.playlist_count == 1:
+			self._player.playlist_pos = 0
+
+	@staticmethod
+	def write_to_file(audio: bytes, fmt: str, book: str, page: int) -> None:
 		path = os.path.join(book, "audio", f"{page}.mp3")
 
 		if fmt == "mp3":
@@ -56,22 +75,42 @@ class AudioPlayer:
 		return not self._player.pause
 
 	def stop(self) -> None:
-		self._player.stop()
-
-		if self._current_book is not None:
-			Thread(target=self.raw_to_mp3, args=(self._current_book,)).start()
+		self._player.stop(keep_playlist="yes")
 
 		self._current_book = None
+		self._playlist_duration = [0.0]
 
-	def raw_to_mp3(self, file: str) -> None:
-		ffmpeg.input(file, f="s16le", ar=AudioPlayer._SAMPLE_RATE, ac=AudioPlayer._CHANNELS).output(file[:-3] + "mp3.part", f="mp3").run(overwrite_output=True)
-		shutil.move(file[:-3] + "mp3.part", file[:-3] + "mp3")
+	def join_mp3s(self, book: str) -> None:
+		with NamedTemporaryFile("wt") as f:
+			f.write("\n".join(f"file '{f.path}'" for f in os.scandir(os.path.join(book, "audio"))))
+			f.flush()
+			os.fsync(f.fileno())
+			ffmpeg.input("pipe:", f="concat", safe=0).output(os.path.join(book, "book.mp3"), c="copy").run(overwrite_output=True)
 
 	def rewind(self) -> None:
-		self._player.seek(-10)
+		if self.file_pos >= 10:
+			self._player.seek(-10)
+		else:
+			seek_amount = 10 - self.file_pos
+			self._player.playlist_prev()
+			self._player.seek(self._current_file_duration() - seek_amount, "absolute")
 
 	def fast_forward(self) -> None:
-		self._player.seek(10)
+		duration_remaining = self._current_file_duration() - self.file_pos
+
+		if duration_remaining >= 10:
+			self._player.seek(10)
+		else:
+			self._player.playlist_prev()
+			self._player.seek(10 - duration_remaining, "absolute")
+
+	def seek(self, pos: float) -> None:
+		if not pos >= self._playlist_duration[-1]:
+			self._player.playlist_pos = next(i - 1 for i, d in enumerate(self._playlist_duration) if d > pos)
+			self._player.seek(pos - self._playlist_duration[self._player.playlist_pos])
+
+	def _current_file_duration(self) -> float:
+		return self._playlist_duration[self.playlist_pos + 1] - self._playlist_duration[self.playlist_pos]
 
 	@property
 	def active(self) -> bool:
@@ -88,3 +127,15 @@ class AudioPlayer:
 	@volume.setter
 	def volume(self, volume: float) -> None:
 		self._player.volume = volume * 100
+
+	@property
+	def playlist_pos(self) -> int:
+		return self._player.playlist_pos
+
+	@property
+	def file_pos(self) -> float:
+		return self._player.time_pos
+
+	@property
+	def total_pos(self) -> float:
+		return self._playlist_duration[self.playlist_pos] + self.file_pos if self.active else -1

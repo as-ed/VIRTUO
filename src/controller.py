@@ -2,7 +2,6 @@ from datetime import datetime
 import json
 from json import JSONDecodeError
 import os
-from queue import SimpleQueue
 import re
 from threading import Thread, Event, Lock
 from typing import List, Optional, Tuple, Any, Dict
@@ -29,7 +28,6 @@ class _Controller:
 		self._stop_event = Event()
 		self._scan_thread = None
 		self._scan_start_stop_lock = Lock()
-		self._tts_queue = SimpleQueue()
 
 	def scan(self, listen: bool, book: str = None) -> Optional[Tuple[str, datetime]]:
 		with self._scan_start_stop_lock:
@@ -40,22 +38,27 @@ class _Controller:
 					book, time = self._new_book()
 				else:
 					with self._metadata_lock, open(os.path.join(CFG["book_location"], book, _Controller._METADATA_FILE)) as f:
-						time = datetime.fromtimestamp(json.load(f)["scan_time"])
+						metadata = json.load(f)
+						time = datetime.fromtimestamp(metadata["scan_time"])
+						listened_up_to = metadata["listened_up_to"]
 
 				# start scanning thread
 				self._scan_thread = Thread(target=self._scan, args=(book,), name="Book scan thread")
-				self._listening = listen
+				self._player.play(book, listened_up_to if listen else None)
 				self._scan_thread.start()
-				Thread(target=self._generate_audio, name="TTS thread").start()
 
 				return book, time
 			elif book is None:
-				self._listening = listen
-
 				with self._metadata_lock, open(os.path.join(CFG["book_location"], self._scanning, _Controller._METADATA_FILE)) as f:
-					time = datetime.fromtimestamp(json.load(f)["scan_time"])
+					metadata = json.load(f)
+					time = datetime.fromtimestamp(metadata["scan_time"])
+					listened_up_to = metadata["listened_up_to"]
+
+				self._player.seek(listened_up_to)
 
 				return self._scanning, time
+
+			self._listening = listen
 
 	def stop_scan(self) -> Optional[Tuple[str, int]]:
 		with self._scan_start_stop_lock:
@@ -186,13 +189,13 @@ class _Controller:
 		date = datetime.isoformat(now)[:10]
 		num = len(list(filter(lambda b: re.match(date + r" - (\d*)", b), os.listdir(CFG["book_location"])))) + 1
 		book_dir = f"{date} - {num}"
-		book_path = os.path.join(CFG["book_location"], book_dir)
+		book_path = os.path.join(CFG["book_location"], book_dir, "audio")
 		os.makedirs(book_path)
 
 		open(os.path.join(book_path, _Controller._TEXT_FILE), "w").close()
 
 		with self._metadata_lock, open(os.path.join(book_path, _Controller._METADATA_FILE), "w") as f:
-			json.dump({"scan_time": datetime.timestamp(now), "pages": 0, "last_sentence": ""}, f)
+			json.dump({"scan_time": datetime.timestamp(now), "pages": 0, "last_sentence": "", "listened_up_to": 0}, f)
 
 		return book_dir, now
 
@@ -209,6 +212,10 @@ class _Controller:
 			cam = cameras[metadata["pages"] % 2]
 			text, metadata["last_sentence"] = get_text(take_photo(cam), book_path, metadata["pages"], metadata["last_sentence"])
 
+			# TTS
+			audio, fmt = self._tts.synthesize(text)
+			self._player.add_audio(audio, fmt, metadata["pages"], self._listening)
+
 			# page flipping
 			if cam == Camera.right:
 				if not flip_page():
@@ -222,9 +229,6 @@ class _Controller:
 			metadata["pages"] += 1
 			with self._metadata_lock, open(os.path.join(book_path, _Controller._METADATA_FILE), "w") as f:
 				json.dump(metadata, f)
-
-	def _generate_audio(self) -> None:
-		pass
 
 
 controller = _Controller()
