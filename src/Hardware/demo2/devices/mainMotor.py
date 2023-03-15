@@ -9,9 +9,7 @@ class MainMotor:
         self.reset_sensor = reset_sensor
 
     def move(self, speed, duration):
-        self.mp.move(speed)
-        time.sleep(duration)
-        self.mp.stop()
+        self.mp.move(speed, duration)
 
     def forward(self, duration):
         self.move(self.forward_speed, duration)
