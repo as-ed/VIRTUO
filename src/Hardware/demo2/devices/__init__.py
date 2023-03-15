@@ -4,4 +4,4 @@ from devices.fanGroup import FanGroup
 from devices.motorPin import MotorPin
 from devices.slider import Slider
 from devices.baseClipper import BaseClipper
-
+from devices.encoderPin import EncoderPin
