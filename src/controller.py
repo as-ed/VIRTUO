@@ -32,6 +32,7 @@ class _Controller:
 		self._scan_thread = None
 		self._scan_start_stop_lock = Lock()
 		self.audio_queue = SimpleQueue()
+		self.test_mode = False
 
 		self._books = []
 		for book_dir in os.scandir(CFG["book_location"]):
@@ -244,11 +245,11 @@ class _Controller:
 		while not last_page and not self._stop_event.is_set():
 			# OCR
 			cam = cameras[self._metadata["pages"] % 2]
-			text, self._metadata["last_sentence"] = get_text(take_photo(cam), book_path, self._metadata["pages"], self._metadata["last_sentence"])
+			text, self._metadata["last_sentence"] = get_text(None if self.test_mode else take_photo(cam), book_path, self._metadata["pages"], self._metadata["last_sentence"], self.test_mode)
 
 			# page flipping
 			if cam == Camera.right:
-				if not flip_page():
+				if not flip_page(self.test_mode):
 					text += " " + self._metadata["last_sentence"]
 					self._metadata["last_sentence"] = ""
 					last_page = True

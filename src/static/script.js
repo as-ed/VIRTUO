@@ -111,7 +111,7 @@ function setStatus(newStatus) {
 			}
 		}
 
-		initCurrentAudio(newStatus.playing, newStatus.scanning)
+		initCurrentAudio(newStatus.playing, (newStatus.scanning == null) ? status.scanning : newStatus.scanning)
 	}
 
 	if (status.paused !== newStatus.paused)

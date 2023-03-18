@@ -1,4 +1,7 @@
-from threading import Event
+from __future__ import annotations
+
+from queue import SimpleQueue
+from threading import Event, Thread
 
 import cv2
 from enum import Enum
@@ -7,8 +10,11 @@ import numpy as np
 from config import CFG
 
 if CFG["web"]["host"] == "localhost":
-	from typing import Union
+	from typing import Union, Tuple, Optional
 	from pynput.keyboard import Key, KeyCode, Listener
+
+
+capture_thread_input: SimpleQueue[Optional[Tuple[Camera, float, SimpleQueue]]] = SimpleQueue()
 
 
 class Camera(Enum):
@@ -17,17 +23,16 @@ class Camera(Enum):
 
 
 def init_camera() -> None:
-	_start_capture(Camera.left, CFG["camera"]["init_time"]).release()
+	capture_thread_input.put((Camera.left, CFG["camera"]["init_time"], SimpleQueue()))
 
 
 def take_photo(camera: Camera) -> np.ndarray:
-	cam = _start_capture(camera)
-	_, img = cam.read()
-	cam.release()
-	return img
+	return_queue = SimpleQueue()
+	capture_thread_input.put((camera, CFG["camera"]["photo_delay"], return_queue))
+	return return_queue.get()
 
 
-def _start_capture(camera: Camera, calibration_delay: int = CFG["camera"]["photo_delay"]) -> cv2.VideoCapture:
+def _capture(camera: Camera, calibration_delay: float) -> cv2.VideoCapture:
 	cam = cv2.VideoCapture(camera.value)
 
 	# set camera properties
@@ -46,10 +51,8 @@ def _start_capture(camera: Camera, calibration_delay: int = CFG["camera"]["photo
 
 		key_listener = Listener(on_press=on_press)
 		key_listener.start()
-
 		cv2.namedWindow("preview", cv2.WINDOW_NORMAL | cv2.WINDOW_KEEPRATIO | cv2.WINDOW_GUI_NORMAL)
 		cv2.resizeWindow("preview", 854, 480)
-
 		while not stop.is_set():
 			cv2.imshow("preview", cam.read()[1])
 			cv2.waitKey(20)
@@ -60,4 +63,15 @@ def _start_capture(camera: Camera, calibration_delay: int = CFG["camera"]["photo
 		for _ in range(int(cam.get(cv2.CAP_PROP_FPS) * calibration_delay)):
 			cam.read()
 
-	return cam
+	_, img = cam.read()
+	cam.release()
+	return img
+
+
+def _capture_thread() -> None:
+	while (args := capture_thread_input.get()) is not None:
+		camera, delay, return_queue = args
+		return_queue.put(_capture(camera, delay))
+
+
+Thread(target=_capture_thread, name="Capture thread").start()
