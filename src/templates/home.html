@@ -21,26 +21,26 @@
 			<h3 id="scan-status" class="status-idle" aria-label="scanning status">Scanner idle</h3>
 		{% endif %}
 		<div class="controls">
-			<a id="scan-listen" class="scan-control bold {% if listening %}inactive{% endif %}" onclick="scan(true)">Scan & listen <i class="fa-solid fa-book-open-reader"></i></a>
-			<a id="scan-only" class="scan-control bold {% if scanning and not listening %}inactive{% endif %}" onclick="scan(false)">Scan only <i class="fa-solid fa-book-open"></i></a>
-			<a id="stop-scan" class="bold {% if not scanning %}inactive{% endif %}" onclick="stopScan()">Stop scanning <i class="fa-solid fa-stop"></i></a>
+			<a id="scan-listen" class="scan-control bold {% if listening %}inactive{% endif %}" onclick="scan(true)" aria-label="scan and listen">Scan & listen <i class="fa-solid fa-book-open-reader" aria-hidden="true"></i></a>
+			<a id="scan-only" class="scan-control bold {% if scanning and not listening %}inactive{% endif %}" onclick="scan(false)" aria-label="scan only">Scan only <i class="fa-solid fa-book-open" aria-hidden="true"></i></a>
+			<a id="stop-scan" class="bold {% if not scanning %}inactive{% endif %}" onclick="stopScan()" aria-label="stop scanning">Stop scanning <i class="fa-solid fa-stop" aria-hidden="true"></i></a>
 
 			<hr class="vr">
 
 			<div id="playback-controls">
-				<a class="playback-control {% if not playing %}inactive{% endif %}" onclick="rewind()"><i class="fa-solid fa-backward"></i></a>
-				<a class="playback-control {% if not playing %}inactive{% endif %}" onclick="togglePause()" id="playpause"><i class="fa-solid {% if paused or not listening %}fa-play{% else %}fa-pause{% endif %}"></i></a>
-				<a class="{% if not playing %}inactive{% endif %}" onclick="fastForward()"><i class="fa-solid fa-forward"></i></a>
+				<a class="playback-control {% if not playing %}inactive{% endif %}" onclick="rewind()" title="rewind" aria-label="rewind"><i class="fa-solid fa-backward" aria-hidden="true"></i></a>
+				<a class="playback-control {% if not playing %}inactive{% endif %}" onclick="togglePause()" id="playpause" title="play/pause" aria-label="play/pause"><i class="fa-solid {% if paused or not listening %}fa-play{% else %}fa-pause{% endif %}" aria-hidden="true"></i></a>
+				<a class="{% if not playing %}inactive{% endif %}" onclick="fastForward()" title="fast-forward" aria-label=fast-forward""><i class="fa-solid fa-forward" aria-hidden="true"></i></a>
 			</div>
-			<a class="volume-down" onclick="volumeDown()"><i class="fa-solid fa-volume-low"></i></a>
-			<input type="range" min="0" max="100" value="{{volume * 100}}" id="volume" onchange="setVolume(this.value)">
-			<a><i class="fa-solid fa-volume-up" onclick="volumeUp()"></i></a>
+			<a class="volume-down" onclick="volumeDown()" title="volume down" aria-label="volume down"><i class="fa-solid fa-volume-low" aria-hidden="true"></i></a>
+			<input type="range" min="0" max="100" value="{{volume * 100}}" id="volume" onchange="setVolume(this.value)" alt="volume slider" aria-label="volume slider">
+			<a onclick="volumeUp()" title="volume up" aria-label="volume up"><i class="fa-solid fa-volume-up" aria-hidden="true"></i></a>
 
 			<hr class="vr">
 
 			<div class="voice-select">
 				Select voice:
-				<select name="voices" id="voiceSelect" onchange="setVoice()">
+				<select name="voices" id="voiceSelect" onchange="setVoice()" aria-label="change voice">
 					<option selected value="{{current_voice}}">{{current_voice}}</option>
 					{% for voice in voices %}
 					<option value="{{voice}}">{{voice}}</option>
@@ -48,7 +48,7 @@
 				</select>
 			</div>
 			Sample:
-			<audio id="voice-sample" controls src="system/voiceSample/{{current_voice}}"></audio>
+			<audio id="voice-sample" controls src="system/voiceSample/{{current_voice}}" aria-label="voice sample"></audio>
 		</div>
 
 		{% if books|length > 0 %}
@@ -67,20 +67,20 @@
 			<tbody id="books">
 			{% for book in books %}
 				<tr id="{{book["id"]}}" class="book">
-					<td class="md-row sm-row"><input type="text" class="metadata" id="title_{{book["id"]}}" value="{{book["title"]}}" placeholder="Enter title" oninput="setTitle('{{book["id"]}}', this)"></td>
-					<td class="md-row sm-row"><input type="text" class="metadata" id="author_{{book["id"]}}" value="{{book["author"]}}" placeholder="Enter author" oninput="setAuthor('{{book["id"]}}', this)"></td>
-					<td id="pages_{{book["id"]}}" class="md-row sm-row"><span class="mobile-bold">{{book["pages"]}}</span><span class="mobile-only"> page{% if book["pages"] != 1 %}s{% endif %}, scanned at </span></td>
-					<td class="md-row sm-row"><span class="mobile-bold">{{book["time"]}}</span></td>
-					<td class="md-row"><span class="mobile-only">Downloads: </span><a href="books/{{book["id"]}}/book.txt" target="_blank" download>Text</a></td>
-					<td class="md-row"><a href="books/{{book["id"]}}/book.pdf" target="_blank">PDF</a></td>
-					<td class="md-row"><a href="books/{{book["id"]}}/book.epub" target="_blank">EPUB</a></td>
-					<td class="md-row"><a href="books/{{book["id"]}}/book.mp3" target="_blank" download>MP3</a></td>
-					<td><audio class="book-playback" controls preload="none" src="books/{{book["id"]}}/book.stream.mp3"></audio></td>
+					<td class="md-row sm-row"><input type="text" class="metadata" id="title_{{book["id"]}}" value="{{book["title"]}}" placeholder="Enter title" oninput="setTitle('{{book["id"]}}', this)" aria-label="title"></td>
+					<td class="md-row sm-row"><input type="text" class="metadata" id="author_{{book["id"]}}" value="{{book["author"]}}" placeholder="Enter author" oninput="setAuthor('{{book["id"]}}', this)" aria-label="author"></td>
+					<td id="pages_{{book["id"]}}" class="md-row sm-row"><span class="mobile-bold" aria-label="number of pages">{{book["pages"]}}</span><span class="mobile-only"> page{% if book["pages"] != 1 %}s{% endif %}, scanned at </span></td>
+					<td class="md-row sm-row"><span class="mobile-bold" aria-label="scanned at time">{{book["time"]}}</span></td>
+					<td class="md-row"><span class="mobile-only">Downloads: </span><a href="books/{{book["id"]}}/book.txt" target="_blank" download aria-label="download text file">Text</a></td>
+					<td class="md-row"><a href="books/{{book["id"]}}/book.pdf" target="_blank" aria-label="download PDF file">PDF</a></td>
+					<td class="md-row"><a href="books/{{book["id"]}}/book.epub" target="_blank" aria-label="download EPUB file">EPUB</a></td>
+					<td class="md-row"><a href="books/{{book["id"]}}/book.mp3" target="_blank" download aria-label="download MP3 file">MP3</a></td>
+					<td><audio class="book-playback" controls preload="none" src="books/{{book["id"]}}/book.stream.mp3" aria-label="book playback"></audio></td>
 					<td id="status_{{book["id"]}}" class="book-status">
 					{% if scanning == book["id"] %}
 						<span class="current-scan">Currently being scanned</span>
 					{% else %}
-						<a class="continue-scan bold {% if scanning %}inactive{% endif %}" onclick="scan(false, '{{book["id"]}}')">Continue scanning <i class="fa-solid fa-book-open"></i></a>
+						<a class="continue-scan bold {% if scanning %}inactive{% endif %}" onclick="scan(false, '{{book["id"]}}')" aria-label="continue scanning book">Continue scanning <i class="fa-solid fa-book-open" aria-hidden="true"></i></a>
 					{% endif %}
 					</td>
 				</tr>
