@@ -2,6 +2,7 @@ import io
 import os
 import re
 from tempfile import NamedTemporaryFile
+from time import sleep
 
 import ffmpeg
 from mpv import MPV
@@ -43,7 +44,7 @@ class AudioPlayer:
 	def _add_to_playlist(self, file: str, play: bool = False) -> None:
 		path = os.path.join(self._current_book, "audio", file)
 
-		_, out = ffmpeg.input("../test/f1.mp3").output("-", f="null").run(capture_stderr=True)
+		_, out = ffmpeg.input(path).output("-", f="null").run(capture_stderr=True)
 		match = re.search("time=(?P<hours>\\d{2}):(?P<minutes>\\d{2}):(?P<seconds>\\d{2}.\\d{2})[^\r]+$", out.decode())
 		self._playlist_duration.append(self._playlist_duration[-1] + 3600 * int(match["hours"]) + 60 * int(match["minutes"]) + float(match["seconds"]))
 
@@ -74,40 +75,62 @@ class AudioPlayer:
 
 		return not self._player.pause
 
+	def pause(self) -> None:
+		if not self._player.pause:
+			self._player.cycle("pause")
+
 	def stop(self) -> None:
 		self._player.stop(keep_playlist="yes")
 
+	def quit(self) -> None:
+		self._player.stop()
 		self._current_book = None
 		self._playlist_duration = [0.0]
 
-	def join_mp3s(self, book: str) -> None:
+	@staticmethod
+	def join_mp3s(book: str) -> None:
 		with NamedTemporaryFile("wt") as f:
-			f.write("\n".join(f"file '{f.path}'" for f in os.scandir(os.path.join(book, "audio"))))
+			f.write("\n".join(f"file '{file.path}'" for file in sorted(os.scandir(os.path.join(book, "audio")), key=lambda file: int(file.name[:-4]))))
 			f.flush()
 			os.fsync(f.fileno())
-			ffmpeg.input("pipe:", f="concat", safe=0).output(os.path.join(book, "book.mp3"), c="copy").run(overwrite_output=True)
+			ffmpeg.input(f.name.encode(), f="concat", safe=0).output(os.path.join(book, "book.mp3"), c="copy").run(overwrite_output=True, quiet=True)
 
 	def rewind(self) -> None:
 		if self.file_pos >= 10:
 			self._player.seek(-10)
+		elif self._player.playlist_pos == 0:
+			self._player.seek(0, "absolute")
 		else:
 			seek_amount = 10 - self.file_pos
 			self._player.playlist_prev()
-			self._player.seek(self._current_file_duration() - seek_amount, "absolute")
+			self._safe_seek(self._current_file_duration() - seek_amount)
 
 	def fast_forward(self) -> None:
 		duration_remaining = self._current_file_duration() - self.file_pos
 
 		if duration_remaining >= 10:
 			self._player.seek(10)
+		elif self._player.playlist_pos == self._player.playlist_count - 1:
+			self._player.seek(duration_remaining + 1, "absolute")
 		else:
-			self._player.playlist_prev()
-			self._player.seek(10 - duration_remaining, "absolute")
+			self._player.playlist_next()
+			self._safe_seek(10 - duration_remaining)
 
 	def seek(self, pos: float) -> None:
-		if not pos >= self._playlist_duration[-1]:
+		if 0 <= pos < self._playlist_duration[-1]:
 			self._player.playlist_pos = next(i - 1 for i, d in enumerate(self._playlist_duration) if d > pos)
-			self._player.seek(pos - self._playlist_duration[self._player.playlist_pos])
+			self._safe_seek(pos - self._playlist_duration[self._player.playlist_pos])
+
+	def _safe_seek(self, pos: float) -> None:
+		success = False
+		while not success:
+			try:
+				while self._player.core_idle or self._player.seeking:
+					sleep(0.01)
+				self._player.seek(pos)
+				success = True
+			except SystemError:
+				pass
 
 	def _current_file_duration(self) -> float:
 		return self._playlist_duration[self.playlist_pos + 1] - self._playlist_duration[self.playlist_pos]
@@ -138,4 +161,8 @@ class AudioPlayer:
 
 	@property
 	def total_pos(self) -> float:
-		return self._playlist_duration[self.playlist_pos] + self.file_pos if self.active else -1
+		return self._playlist_duration[self.playlist_pos] + self.file_pos if self.active else 0
+
+	@property
+	def eop_reached(self) -> bool:
+		return self.playlist_pos == self._player.playlist_count - 1 and self._player.eof_reached

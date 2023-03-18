@@ -58,8 +58,8 @@ class TTS:
 		try:
 			response = self._gtts_client.synthesize_speech(input=text_input, voice=self._gtts_voice_params, audio_config=self._gtts_audio_config, timeout=60)
 			return response.audio_content
-		except Exception as e:
-			print(e)
+		except Exception:
+			pass
 
 	def _test_connection(self) -> bool:
 		try:

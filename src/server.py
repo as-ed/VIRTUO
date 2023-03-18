@@ -1,10 +1,9 @@
-from datetime import datetime
 import json
-from json import JSONDecodeError
 import os
-from typing import Union, Tuple
+from time import sleep
+from typing import Union, Tuple, Dict, List, Generator
 
-from flask import Flask, redirect, render_template, request, send_from_directory, Response
+from flask import Flask, render_template, request, send_from_directory, Response, send_file
 
 from config import CFG
 from controller import controller as cont
@@ -24,37 +23,54 @@ def home() -> str:
 	voices = cont.get_voices()
 	voices.remove(cont.voice)
 
-	books = cont.books()
+	return render_template(
+		"home.html",
+		books=list(reversed(cont.books)),
+		voices=voices,
+		current_voice=cont.voice,
+		scanning=cont.scanning,
+		listening=cont.listening,
+		playing=cont.playing,
+		paused=cont.paused,
+		volume=cont.volume)
 
-	books.sort(key=lambda b: b["time"], reverse=True)
 
-	return render_template("home.html", books=books, voices=voices, current_voice=cont.voice, scanning=cont.scanning, listening=cont.listening, paused=cont.paused, volume=cont.volume)
+@server.get("/books")
+def get_books() -> Tuple[List[Dict], int]:
+	return cont.books, 200
 
 
 @server.get("/books/<book>/book.txt")
-def download_txt(book: str) -> Union[str, Response]:
-	if not os.path.isfile(_get_path(book, "book.txt")):
-		return render_template("redirect.html")
-	else:
-		return send_from_directory(_get_path(book), "book.txt")
+def download_txt(book: str) -> Response:
+	return send_file(os.path.join(_get_path(book), "book.txt"), mimetype="text/plain", download_name=_get_download_name(book, ".txt"))
 
 
 @server.get("/books/<book>/book.pdf")
 def download_pdf(book: str) -> Response:
 	conv.create_pdf(_get_path(book))
-	return send_from_directory(_get_path(book), "book.pdf")
+	return send_file(os.path.join(_get_path(book), "book.pdf"), mimetype="application/pdf", download_name=_get_download_name(book, ".pdf"))
 
 
-@server.route("/books/<book>/book.epub")
+@server.get("/books/<book>/book.epub")
 def download_epub(book: str) -> Response:
 	conv.create_epub(_get_path(book))
-	return send_from_directory(_get_path(book), "book.epub")
+	return send_file(os.path.join(_get_path(book), "book.epub"), mimetype="application/epub+zip", download_name=_get_download_name(book, ".epub"))
 
 
-@server.route("/books/<book>/book.mp3")
+@server.get("/books/<book>/book.mp3")
 def download_mp3(book: str) -> Response:
 	conv.create_mp3(_get_path(book))
-	return send_from_directory(_get_path(book), "book.mp3")
+	return send_file(os.path.join(_get_path(book), "book.mp3"), mimetype="audio/mpeg", download_name=_get_download_name(book, ".mp3"))
+
+
+@server.get("/books/<book>/book.stream.mp3")
+def stream_mp3(book: str) -> Response:
+	def stream() -> Generator[bytes, None, None]:
+		for page in sorted(os.scandir(os.path.join(_get_path(book), "audio")), key=lambda file: int(file.name[:-4])):
+			with open(page.path, "rb") as f:
+				yield f.read()
+
+	return Response(stream(), mimetype="audio/mpeg")
 
 
 @server.post("/books/<book>/title")
@@ -73,15 +89,14 @@ def get_last_page(book: str) -> Tuple[str, int]:
 
 
 @server.post("/system/scan/start")
-def start_scan() -> Tuple[str, int]:
+def start_scan() -> Tuple[Union[Dict, str], int]:
 	book = cont.scan(request.args["listen"] == "true", request.args["book"] if "book" in request.args else None)
-	return ({"id": book[0], "time": book[1].strftime("%Y-%m-%d\u00a0\u00a0\u00a0%H:%M")}, 200) if book is not None else ("", 400)
+	return (book, 200) if book is not None else ("", 400)
 
 
 @server.post("/system/scan/stop")
 def stop_scan() -> Tuple[str, int]:
-	cont.stop_scan()
-	return ({"id": book[0], "pages": book[1]}, 200) if (book := cont.stop_scan()) is not None else ("", 400)
+	return ("", 204) if cont.stop_scan() else ("", 400)
 
 
 @server.post("/system/setVolume/<value>")
@@ -106,6 +121,23 @@ def toggle_pause() -> Tuple[str, int]:
 	return str(cont.toggle_pause()), 200
 
 
+@server.post("/system/pause")
+def pause() -> Tuple[str, int]:
+	cont.pause()
+	return "", 200
+
+
+@server.get("/system/playbackPos")
+def playback_pos() -> Tuple[str, int]:
+	return str(cont.playback_pos), 200
+
+
+@server.post("/system/seek/<pos>")
+def seek(pos: str) -> Tuple[str, int]:
+	cont.seek(float(pos))
+	return "", 204
+
+
 @server.route("/system/fastForward", methods=["GET", "POST"])
 def fast_forward() -> Tuple[str, int]:
 	cont.fast_forward()
@@ -118,6 +150,18 @@ def rewind() -> Tuple[str, int]:
 	return "", 204
 
 
+@server.get("/system/status")
+def status() -> Tuple[Dict, int]:
+	return {
+		"scanning": cont.scanning,
+		"listening": cont.listening,
+		"playing": cont.playing,
+		"paused": cont.paused or not cont.playing,
+		"volume": cont.volume * 100, "num_books": len(cont.books),
+		"current_book_pages": [b for b in cont.books if b["id"] == cont.scanning][0]["pages"] if cont.scanning is not None else -1
+	}, 200
+
+
 @server.get("/fonts/<file>")
 def font(file: str) -> Response:
 	return send_from_directory(os.path.join(server.root_path, "static", "fonts"), file)
@@ -125,3 +169,16 @@ def font(file: str) -> Response:
 
 def _get_path(book: str, file: str = None) -> str:
 	return os.path.join(CFG["book_location"], book) if file is None else os.path.join(CFG["book_location"], book, file)
+
+
+def _get_download_name(book: str, suffix: str) -> str:
+	with cont.metadata_lock, open(os.path.join(_get_path(book), cont.METADATA_FILE)) as f:
+		metadata = json.load(f)
+		name = title if "title" in metadata and (title := metadata["title"]) != "" else "Book"
+
+		if "author" in metadata and (author := metadata["author"]) != "":
+			name += " - " + author
+
+		name += suffix
+
+	return name

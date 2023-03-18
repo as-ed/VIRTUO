@@ -8,7 +8,7 @@
 		<link href="static/style.css" rel="stylesheet">
 		<link rel="stylesheet" href="static/fontawesome/css/all.min.css">
 	</head>
-	<body>
+	<body onload="startStatusUpdates({{ "null" if scanning is none else "'" + scanning + "'"}}, {{"true" if listening else "false"}}, {{"true" if playing else "false"}}, {{"true" if paused else "false"}}, {{volume}}, {{books|length}}, -1)">
 		<div class="header">
 			<h1>VIRTUO</h1>
 			<h4 class="subtitle">Visual Impairment Reading Technology Utilizing Outspoken language</h4>
@@ -22,15 +22,15 @@
 		{% endif %}
 		<div class="controls">
 			<a id="scan-listen" class="scan-control bold {% if listening %}inactive{% endif %}" onclick="scan(true)">Scan & listen <i class="fa-solid fa-book-open-reader"></i></a>
-			<a id="scan-only" class="scan-control bold {% if scanning %}inactive{% endif %}" onclick="scan(false)">Scan only <i class="fa-solid fa-book-open"></i></a>
+			<a id="scan-only" class="scan-control bold {% if scanning and not listening %}inactive{% endif %}" onclick="scan(false)">Scan only <i class="fa-solid fa-book-open"></i></a>
 			<a id="stop-scan" class="bold {% if not scanning %}inactive{% endif %}" onclick="stopScan()">Stop scanning <i class="fa-solid fa-stop"></i></a>
 
 			<hr class="vr">
 
 			<div id="playback-controls">
-				<a class="playback-control {% if not listening %}inactive{% endif %}" onclick="rewind()"><i class="fa-solid fa-backward"></i></a>
-				<a class="playback-control {% if not listening %}inactive{% endif %}" onclick="togglePause()" id="playpause"><i class="fa-solid {% if paused or not listening %}fa-play{% else %}fa-pause{% endif %}"></i></a>
-				<a class="{% if not listening %}inactive{% endif %}" onclick="fastForward()"><i class="fa-solid fa-forward"></i></a>
+				<a class="playback-control {% if not playing %}inactive{% endif %}" onclick="rewind()"><i class="fa-solid fa-backward"></i></a>
+				<a class="playback-control {% if not playing %}inactive{% endif %}" onclick="togglePause()" id="playpause"><i class="fa-solid {% if paused or not listening %}fa-play{% else %}fa-pause{% endif %}"></i></a>
+				<a class="{% if not playing %}inactive{% endif %}" onclick="fastForward()"><i class="fa-solid fa-forward"></i></a>
 			</div>
 			<a class="volume-down" onclick="volumeDown()"><i class="fa-solid fa-volume-low"></i></a>
 			<input type="range" min="0" max="100" value="{{volume * 100}}" id="volume" onchange="setVolume(this.value)">
@@ -70,17 +70,17 @@
 					<td class="md-row sm-row"><input type="text" class="metadata" id="title_{{book["id"]}}" value="{{book["title"]}}" placeholder="Enter title" oninput="setTitle('{{book["id"]}}', this)"></td>
 					<td class="md-row sm-row"><input type="text" class="metadata" id="author_{{book["id"]}}" value="{{book["author"]}}" placeholder="Enter author" oninput="setAuthor('{{book["id"]}}', this)"></td>
 					<td id="pages_{{book["id"]}}" class="md-row sm-row"><span class="mobile-bold">{{book["pages"]}}</span><span class="mobile-only"> page{% if book["pages"] != 1 %}s{% endif %}, scanned at </span></td>
-					<td class="md-row sm-row"><span class="mobile-bold">{{book["time"].strftime("%Y-%m-%d\u00a0\u00a0\u00a0%H:%M")}}</span></td>
+					<td class="md-row sm-row"><span class="mobile-bold">{{book["time"]}}</span></td>
 					<td class="md-row"><span class="mobile-only">Downloads: </span><a href="books/{{book["id"]}}/book.txt" target="_blank" download>Text</a></td>
 					<td class="md-row"><a href="books/{{book["id"]}}/book.pdf" target="_blank">PDF</a></td>
 					<td class="md-row"><a href="books/{{book["id"]}}/book.epub" target="_blank">EPUB</a></td>
 					<td class="md-row"><a href="books/{{book["id"]}}/book.mp3" target="_blank" download>MP3</a></td>
-					<td><audio class="book-playback" controls preload="none" src="books/{{book["id"]}}/book.mp3"></audio></td>
-					<td id="status_{{book["id"]}}">
+					<td><audio class="book-playback" controls preload="none" src="books/{{book["id"]}}/book.stream.mp3"></audio></td>
+					<td id="status_{{book["id"]}}" class="book-status">
 					{% if scanning == book["id"] %}
 						<span class="current-scan">Currently being scanned</span>
 					{% else %}
-						<a class="continue-scan bold {% if scanning %}inactive{% endif %}" onclick="scan(false, {{book["id"]}})">Continue scanning <i class="fa-solid fa-book-open"></i></a>
+						<a class="continue-scan bold {% if scanning %}inactive{% endif %}" onclick="scan(false, '{{book["id"]}}')">Continue scanning <i class="fa-solid fa-book-open"></i></a>
 					{% endif %}
 					</td>
 				</tr>
