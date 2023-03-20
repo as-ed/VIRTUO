@@ -2,7 +2,7 @@ from devices.motorPin import MotorPin
 import time
 
 class Slider:
-    def __init__(self, pins, up=60, down=-60):
+    def __init__(self, pins, up=50, down=-50):
         self.pins = pins
         self.up_speed = up
         self.down_speed = down
