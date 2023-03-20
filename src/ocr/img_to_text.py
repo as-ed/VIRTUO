@@ -1,58 +1,99 @@
 import os
 import re
-from typing import Tuple, Optional
+from typing import Tuple, Optional, List
 
 import cv2
 from nltk.tokenize import sent_tokenize
 import numpy as np
-from PIL import Image
 import pytesseract
+from pytesseract import Output
 from spellchecker import SpellChecker
+from page_dewarp import dewarp
 
 
 _test_page = -1
 
 
 def get_text(img: np.ndarray, book_loc: Optional[str], page_nr: int = 0, prev_sentence: str = "", test_mode: bool = False) -> Tuple[str, str]:
+	"""
+	Converts image to text.
+	:param img: image as a numpy array of RGB values
+	:param book_loc: location where the digitized book is stored
+	:param page_nr: number of the current page
+	:param prev_sentence: last sentence of the previous page
+	:return: tuple of 2 strings: (page text except last sentence, last (potentially incomplete) sentence)
+	"""
 	global _test_page
 
 	if test_mode:
 		_test_page = (_test_page + 1) % len(_TEST_TEXT)
 		return _post_processing(_TEST_TEXT[_test_page], prev_sentence)
 
-	page_img = _pre_processing(img)
-	_save_img(page_img, book_loc, page_nr)
+	dewarped = _pre_processing(img)
+	bboxes = _extract_bboxes(dewarped)
+	main_body = _extract_main_body(dewarped, bboxes)
+	_save_img(main_body, book_loc, page_nr)
 
-	return _post_processing(_ocr(page_img), prev_sentence)
+	return _post_processing(_ocr(main_body), prev_sentence)
 
 
-def _pre_processing(img: np.ndarray) -> Image:
-	# Load the image into a CV2 object and convert it to grayscale
-	img = cv2.cvtColor(img, cv2.COLOR_BGR2GRAY)
+def _extract_main_body(dewarped: np.ndarray, bboxes: List[Tuple[int]]) -> np.ndarray:
+	mask = np.zeros(dewarped.shape, dtype=np.uint8)
 
+	for x, y, w, h in bboxes:
+		if w * h > 25000:
+			cv2.rectangle(mask, (x, y), (x + w, y + h), (255, 255, 255), -1)
+
+	min_x1 = min(bboxes, key=lambda bbox: bbox[0])[0]
+	max_x2_bbox = max(bboxes, key=lambda bbox: bbox[0] + bbox[2])
+	max_x2 = max_x2_bbox[0] + max_x2_bbox[2]
+	min_y1 = min(bboxes, key=lambda bbox: bbox[1])[1]
+	max_y2_bbox = max(bboxes, key=lambda bbox: bbox[1] + bbox[3])
+	max_y2 = max_y2_bbox[1] + max_y2_bbox[3]
+
+	return (mask & dewarped)[max(0, min_y1 - 20) : max_y2 + 20, max(0, min_x1 - 20) : max_x2 + 20]
+
+
+def _pre_processing(img: np.ndarray) -> np.ndarray:
 	# Rotate image by 90 degrees as camera returns a landscape orientation
 	rotated = cv2.rotate(img, cv2.ROTATE_90_COUNTERCLOCKWISE)
-
-	# Binarize the image (Make each pixel either black or white based on a threshold)
-	#_, binary = cv2.threshold(rotated, CFG["camera"]["black_threshold"], 255, cv2.THRESH_BINARY)
-
-	# Thicken the characters by eroding the surrounding white pixels
-	#kernel = np.ones((3, 3), np.uint8)
-	#eroded = cv2.erode(binary, kernel, iterations=1)
-
-	# Apply noise removal (smoothen character edges)
-	#denoised = cv2.fastNlMeansDenoising(eroded, None, 20, 7, 21)
-
-	return Image.fromarray(rotated)
+	return dewarp(rotated)
 
 
-def _save_img(img: Image, book_loc: str, page_nr: int) -> None:
+def _extract_bboxes(img: np.ndarray) -> List[Tuple[int]]:
+	boxes = pytesseract.image_to_boxes(img, output_type=Output.DICT)
+
+	mask = np.zeros(img.shape, dtype=np.uint8)
+
+	for i in range(len(boxes["left"])):
+		left = boxes["left"][i]
+		bottom = boxes["bottom"][i]
+		right = boxes["right"][i]
+		top = boxes["top"][i]
+
+		area = abs((right - left) * (top - bottom))
+
+		if area < 2000:
+			cv2.rectangle(mask, (left, bottom), (right, top), (255, 0, 255), 5)
+
+	mask = cv2.flip(mask, 0)
+
+	dilated = cv2.dilate(mask, np.ones((3, 3), np.uint8), iterations=17)
+
+	contours, hierarchy = cv2.findContours(
+		dilated, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE
+	)
+
+	return list(map(cv2.boundingRect, contours))
+
+
+def _save_img(img: np.ndarray, book_loc: str, page_nr: int) -> None:
 	path = os.path.join(book_loc, "pages")
 	os.makedirs(path, exist_ok=True)
-	img.save(os.path.join(path, f"{page_nr}.png"), "PNG")
+	cv2.imwrite(os.path.join(path, f"{page_nr}.png"), img)
 
 
-def _ocr(img: Image) -> str:
+def _ocr(img: np.ndarray) -> str:
 	return pytesseract.image_to_string(img)
 
 
