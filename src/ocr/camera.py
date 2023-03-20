@@ -23,7 +23,10 @@ class Camera(Enum):
 
 
 def init_camera() -> None:
-	capture_thread_input.put((Camera.left, CFG["camera"]["init_time"], SimpleQueue()))
+	return_queue = SimpleQueue()
+	capture_thread_input.put((Camera.left, CFG["camera"]["init_time"], return_queue))
+	return_queue.get()
+	capture_thread_input.put((Camera.right, CFG["camera"]["init_time"], SimpleQueue()))
 
 
 def take_photo(camera: Camera) -> np.ndarray:

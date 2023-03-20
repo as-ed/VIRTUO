@@ -656,13 +656,6 @@ def dewarp(img):
     spans = assemble_spans(cinfo_list)
 
     if len(spans) < 3:
-        print("  detecting lines because only", len(spans), "text spans")
-        cinfo_list = get_contours(small, pagemask, "line")
-        spans2 = assemble_spans(cinfo_list)
-        if len(spans2) > len(spans):
-            spans = spans2
-
-    if len(spans) < 1:
         return img
 
     span_points = sample_spans(small.shape, spans)

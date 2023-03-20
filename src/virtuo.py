@@ -25,8 +25,9 @@ if __name__ == "__main__":
 	if parser.parse_args().test:
 		cont.test_mode = True
 	else:
-		init_camera()
+		pass
+		#init_camera()
 
 	# TODO start listening for button presses
 
-	server.run(host=CFG["web"]["host"], port=CFG["web"]["port"], debug=CFG["web"]["host"] == "localhost")
+	server.run(host=CFG["web"]["host"], port=CFG["web"]["port"], debug=False)#CFG["web"]["host"] == "localhost")

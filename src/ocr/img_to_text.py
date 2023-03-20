@@ -8,13 +8,15 @@ import numpy as np
 import pytesseract
 from pytesseract import Output
 from spellchecker import SpellChecker
-from page_dewarp import dewarp
+
+from ocr.camera import Camera
+from ocr.page_dewarp import dewarp
 
 
 _test_page = -1
 
 
-def get_text(img: np.ndarray, book_loc: Optional[str], page_nr: int = 0, prev_sentence: str = "", test_mode: bool = False) -> Tuple[str, str]:
+def get_text(img: np.ndarray, book_loc: Optional[str], side: Camera, page_nr: int = 0, prev_sentence: str = "", test_mode: bool = False) -> Tuple[str, str]:
 	"""
 	Converts image to text.
 	:param img: image as a numpy array of RGB values
@@ -29,37 +31,35 @@ def get_text(img: np.ndarray, book_loc: Optional[str], page_nr: int = 0, prev_se
 		_test_page = (_test_page + 1) % len(_TEST_TEXT)
 		return _post_processing(_TEST_TEXT[_test_page], prev_sentence)
 
-	dewarped = _pre_processing(img)
+	_save_img(img, book_loc, f"{page_nr}_original")
+
+	dewarped = _pre_processing(img, side)
 	bboxes = _extract_bboxes(dewarped)
-	main_body = _extract_main_body(dewarped, bboxes)
+	main_body = _extract_main_body(dewarped, bboxes, book_loc, page_nr)
 	_save_img(main_body, book_loc, page_nr)
 
 	return _post_processing(_ocr(main_body), prev_sentence)
 
 
 def _crop(img: np.ndarray):
-	# Apply soft blurring to get rid of noise
-    blur = cv2.GaussianBlur(img, (5, 3), 0)
+    gray = cv2.cvtColor(img, cv2.COLOR_BGR2GRAY)
+
+    # Apply soft blurring to get rid of noise
+    blur = cv2.GaussianBlur(gray, (5, 3), 0)
 
     # Erode slightly to enhance more of the text before binarisation
     eroded = cv2.erode(blur, np.ones((2, 2), np.uint8), iterations=3)
     _, binarised = cv2.threshold(eroded, 140, 255, cv2.THRESH_BINARY)
 
     # Aggresively erode horizontally
-    eroded = cv2.erode(
-        binarised, cv2.getStructuringElement(cv2.MORPH_RECT, (5, 7)), iterations=3
-    )
-    eroded = cv2.erode(
-        eroded, cv2.getStructuringElement(cv2.MORPH_RECT, (5, 3)), iterations=1
-    )
+    eroded = cv2.erode(binarised, cv2.getStructuringElement(cv2.MORPH_RECT, (5, 7)), iterations=3)
+    eroded = cv2.erode(eroded, cv2.getStructuringElement(cv2.MORPH_RECT, (5, 3)), iterations=1)
 
     # Binarise again but with a higher threshold
-    _, binarised = cv2.threshold(eroded, 150, 255, cv2.THRESH_BINARY)
+    #_, binarised = cv2.threshold(eroded, 150, 255, cv2.THRESH_BINARY)
 
     # Extract Contours
-    contours, hierarchy = cv2.findContours(
-        binarised, cv2.RETR_TREE, cv2.CHAIN_APPROX_SIMPLE
-    )
+    contours, hierarchy = cv2.findContours(eroded, cv2.RETR_LIST, cv2.CHAIN_APPROX_SIMPLE)
 
     real_contours = []
     for contour in contours:
@@ -98,8 +98,10 @@ def _crop(img: np.ndarray):
     return masked[max(0, min_y1 - 20) : max_y2 + 20, max(0, min_x1 - 20) : max_x2 + 20]
 
 
-def _extract_main_body(dewarped: np.ndarray, bboxes: List[Tuple[int]]) -> np.ndarray:
+def _extract_main_body(dewarped: np.ndarray, bboxes: List[Tuple[int]], book_loc: str, page_nr: int) -> np.ndarray:
 	mask = np.zeros(dewarped.shape, dtype=np.uint8)
+
+	print(bboxes)
 
 	for x, y, w, h in bboxes:
 		if w * h > 25000:
@@ -112,14 +114,19 @@ def _extract_main_body(dewarped: np.ndarray, bboxes: List[Tuple[int]]) -> np.nda
 	max_y2_bbox = max(bboxes, key=lambda bbox: bbox[1] + bbox[3])
 	max_y2 = max_y2_bbox[1] + max_y2_bbox[3]
 
+	_save_img(mask, book_loc, f"{page_nr}_mask")
+
 	return (mask & dewarped)[max(0, min_y1 - 20) : max_y2 + 20, max(0, min_x1 - 20) : max_x2 + 20]
 
 
-def _pre_processing(img: np.ndarray) -> np.ndarray:
+def _pre_processing(img: np.ndarray, side: Camera) -> np.ndarray:
 	# Rotate image by 90 degrees as camera returns a landscape orientation
-	rotated = cv2.rotate(img, cv2.ROTATE_90_COUNTERCLOCKWISE)
-	cropped = _crop(rotated)
-	return dewarp(cropped)
+	if side == Camera.left:
+		rotated = cv2.rotate(img, cv2.ROTATE_90_CLOCKWISE)
+	else:
+		rotated = cv2.rotate(img, cv2.ROTATE_90_COUNTERCLOCKWISE)
+	#cropped = _crop(rotated)
+	return dewarp(rotated)
 
 
 def _extract_bboxes(img: np.ndarray) -> List[Tuple[int]]:
