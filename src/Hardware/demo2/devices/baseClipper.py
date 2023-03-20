@@ -27,6 +27,25 @@ class BaseClipper:
     def float(self):
         self.rotator.move(0)
 
+    def unclip(self, float=True, verbose=False):
+        if verbose:
+            print("[INFO] Base Clipper unclipping...")
+        self.retract()
+        self.rise()
+        if float:
+            time.sleep(0.2)
+            self.float()
+
+    def clip(self, float=True, verbose=False):
+        if verbose:
+            print("[INFO] Base Clipper clipping...")
+        self.extend()
+        self.fall()
+        if float:
+            time.sleep(0.2)
+            self.float()
+
+
 
 
 

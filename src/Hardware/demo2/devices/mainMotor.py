@@ -49,6 +49,8 @@ class MainMotor:
         if verbose:
             print("[INFO] moved to angle " + str(angle))
 
+    def get_angle(self, verbose=False):
+        self.ep.get_angle(verbose=verbose)
 
     def reset(self, verbose=False):
         if self.reset_sensor is None:
