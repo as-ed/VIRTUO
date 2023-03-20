@@ -7,7 +7,7 @@ class TopClipper:
         self.speed = speed
 
 
-    def clip(self, float=False, verbose=False):
+    def clip(self, float=True, verbose=False):
         if verbose:
             print("[INFO] Top Clipper clipping...")
         self.mp.move(self.speed)

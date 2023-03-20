@@ -7,8 +7,7 @@ from util import *
 import time
 
 mc = motors2.Motors()
-mc.stop_motors(1)
-mc.stop_motors(2)
+
 
 mm = MainMotor(MotorPin(mc, 1, 2),
                reset_sensor=Button(8),
@@ -21,19 +20,21 @@ bc = BaseClipper(
     100,-50)
 
 ep = EncoderPin(mc, 5)
-tcr = TopClipper(MotorPin(mc, 0, 1), -100)
-tcl = TopClipper(MotorPin(mc, 4, 2), -100)
+tcr = TopClipper(MotorPin(mc, 0, 1), -50)
+tcl = TopClipper(MotorPin(mc, 4, 1), 50)
 
+def stop():
+    mc.stop_motors(1)
+    mc.stop_motors(2)
 
 def turn_page(steps=10, verbose=False):
-    mm.to_angle(0)
-
-    # R clipper up
-    if verbose:
-        print("[INFO] Raising L Clipper...")
+    mm.reset()
 
     # Move arm to right angle
-    mm.to_angle(2, verbose=verbose)
+    mm.to_angle(4, verbose=verbose)
+
+    # R clipper up
+    tcr.unclip(verbose=verbose)
 
     # Set Slider to correct height
     if verbose:
@@ -58,9 +59,10 @@ def turn_page(steps=10, verbose=False):
     # Raise page
     if verbose:
         print("[INFO] Raising page...")
-    mm.to_angle(2, verbose=verbose)
+    mm.to_angle(3, verbose=verbose)
 
     # R clipper falls
+    tcr.clip(verbose=verbose)
 
     # Base clipper raises
     bc.unclip(verbose=verbose)
@@ -81,6 +83,15 @@ def turn_page(steps=10, verbose=False):
         print("[INFO] Raising slider...")
     s.up(0.5)
 
+    # Back to 2
+    mm.to_angle(3, verbose=verbose)
+    s.down(0.5)
+    tcl.unclip(verbose=verbose)
+    mm.to_angle(5)
+    tcl.clip(verbose=verbose)
+    mm.to_angle(3)
+    s.up(0.5)
+
     #Resetting
     if verbose:
         print("[INFO] Resetting...")
@@ -96,7 +107,10 @@ def reset(verbose=False):
     if verbose:
         print("[INFO] Floating base clipper")
     bc.float()
+    tcr.clip()
+    tcl.clip()
     mm.reset(verbose=verbose)
+
 
     mc.stop_motors(1)
     mc.stop_motors(2)
@@ -131,7 +145,7 @@ def calibrate_slider(time_unit=0.08, slider_width=8, total_height=16, verbose=Fa
 
 
 def main():
-    pass
+    stop()
 
 if __name__ == "__main__":
     main()
