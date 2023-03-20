@@ -42,60 +42,60 @@ def get_text(img: np.ndarray, book_loc: Optional[str], side: Camera, page_nr: in
 
 
 def _crop(img: np.ndarray):
-    gray = cv2.cvtColor(img, cv2.COLOR_BGR2GRAY)
+	gray = cv2.cvtColor(img, cv2.COLOR_BGR2GRAY)
 
-    # Apply soft blurring to get rid of noise
-    blur = cv2.GaussianBlur(gray, (5, 3), 0)
+	# Apply soft blurring to get rid of noise
+	blur = cv2.GaussianBlur(gray, (5, 3), 0)
 
-    # Erode slightly to enhance more of the text before binarisation
-    eroded = cv2.erode(blur, np.ones((2, 2), np.uint8), iterations=3)
-    _, binarised = cv2.threshold(eroded, 140, 255, cv2.THRESH_BINARY)
+	# Erode slightly to enhance more of the text before binarisation
+	eroded = cv2.erode(blur, np.ones((2, 2), np.uint8), iterations=3)
+	_, binarised = cv2.threshold(eroded, 140, 255, cv2.THRESH_BINARY)
 
-    # Aggresively erode horizontally
-    eroded = cv2.erode(binarised, cv2.getStructuringElement(cv2.MORPH_RECT, (5, 7)), iterations=3)
-    eroded = cv2.erode(eroded, cv2.getStructuringElement(cv2.MORPH_RECT, (5, 3)), iterations=1)
+	# Aggresively erode horizontally
+	eroded = cv2.erode(binarised, cv2.getStructuringElement(cv2.MORPH_RECT, (5, 7)), iterations=3)
+	eroded = cv2.erode(eroded, cv2.getStructuringElement(cv2.MORPH_RECT, (5, 3)), iterations=1)
 
-    # Binarise again but with a higher threshold
-    #_, binarised = cv2.threshold(eroded, 150, 255, cv2.THRESH_BINARY)
+	# Binarise again but with a higher threshold
+	#_, binarised = cv2.threshold(eroded, 150, 255, cv2.THRESH_BINARY)
 
-    # Extract Contours
-    contours, hierarchy = cv2.findContours(eroded, cv2.RETR_LIST, cv2.CHAIN_APPROX_SIMPLE)
+	# Extract Contours
+	contours, hierarchy = cv2.findContours(eroded, cv2.RETR_LIST, cv2.CHAIN_APPROX_SIMPLE)
 
-    real_contours = []
-    for contour in contours:
-        x, y, w, h = cv2.boundingRect(contour)
+	real_contours = []
+	for contour in contours:
+		x, y, w, h = cv2.boundingRect(contour)
 
-        # Filter out irrelevant contours
-        if h / w > 8:
-            continue
+		# Filter out irrelevant contours
+		if h / w > 8:
+			continue
 
-        if x < 0.05 * img.shape[1] or x + w > 0.95 * img.shape[1]:
-            continue
+		if x < 0.05 * img.shape[1] or x + w > 0.95 * img.shape[1]:
+			continue
 
-        if y < 0.05 * img.shape[0] or y + h > 0.95 * img.shape[0]:
-            continue
+		if y < 0.05 * img.shape[0] or y + h > 0.95 * img.shape[0]:
+			continue
 
-        if w * h < img.shape[0] * img.shape[1] * 0.01:
-            continue
+		if w * h < img.shape[0] * img.shape[1] * 0.01:
+			continue
 
-        real_contours.append((x, y, w, h))
+		real_contours.append((x, y, w, h))
 
-    # Fill the outlined contour in white and add it to the mask
-    mask = np.ones(img.shape, dtype="uint8")
-    for x, y, w, h in real_contours:
-        cv2.rectangle(mask, (x, y), (x + w, y + h), (255, 255, 255), -1)
+	# Fill the outlined contour in white and add it to the mask
+	mask = np.ones(img.shape, dtype="uint8")
+	for x, y, w, h in real_contours:
+		cv2.rectangle(mask, (x, y), (x + w, y + h), (255, 255, 255), -1)
 
-    min_x1 = min(real_contours, key=lambda bbox: bbox[0])[0]
-    max_x2_bbox = max(real_contours, key=lambda bbox: bbox[0] + bbox[2])
-    max_x2 = max_x2_bbox[0] + max_x2_bbox[2]
-    min_y1 = min(real_contours, key=lambda bbox: bbox[1])[1]
-    max_y2_bbox = max(real_contours, key=lambda bbox: bbox[1] + bbox[3])
-    max_y2 = max_y2_bbox[1] + max_y2_bbox[3]
+	min_x1 = min(real_contours, key=lambda bbox: bbox[0])[0]
+	max_x2_bbox = max(real_contours, key=lambda bbox: bbox[0] + bbox[2])
+	max_x2 = max_x2_bbox[0] + max_x2_bbox[2]
+	min_y1 = min(real_contours, key=lambda bbox: bbox[1])[1]
+	max_y2_bbox = max(real_contours, key=lambda bbox: bbox[1] + bbox[3])
+	max_y2 = max_y2_bbox[1] + max_y2_bbox[3]
 
-    # Use mask to only keep the main body of the page
-    masked = cv2.bitwise_and(img, mask)
+	# Use mask to only keep the main body of the page
+	masked = cv2.bitwise_and(img, mask)
 
-    return masked[max(0, min_y1 - 20) : max_y2 + 20, max(0, min_x1 - 20) : max_x2 + 20]
+	return masked[max(0, min_y1 - 20) : max_y2 + 20, max(0, min_x1 - 20) : max_x2 + 20]
 
 
 def _extract_main_body(dewarped: np.ndarray, bboxes: List[Tuple[int]], book_loc: str, page_nr: int) -> np.ndarray:
