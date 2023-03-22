@@ -2,9 +2,10 @@ from devices.motorPin import MotorPin
 import time
 
 class BaseClipper:
-    def __init__(self, rotator, extender, rotator_forward, extender_forward, extend_time=0.5):
+    def __init__(self, rotator, extender, rotator_forward, extender_forward, extend_time=0.4):
         self.rotator = rotator
         self.rotator_forward = rotator_forward
+
 
         self.extender = extender
         self.extender_forward = extender_forward

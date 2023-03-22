@@ -9,15 +9,15 @@ import time
 mc = motors2.Motors()
 
 
-mm = MainMotor(MotorPin(mc, 1, 2),
+mm = MainMotor(MotorPin(mc, 0, 2),
                reset_sensor=Button(8),
                encoder_pin=EncoderPin(mc, 5))
 f = FanGroup(mc, [1,2,3], 1)
-s = Slider([MotorPin(mc, 0, 2), MotorPin(mc, 3, 2)])
+s = Slider([MotorPin(mc, 1, 2), MotorPin(mc, 2, 2)])
 bc = BaseClipper(
-    MotorPin(mc, 5, 2),
-    MotorPin(mc, 4, 2),
-    100,-50)
+    MotorPin(mc, 5, 1),
+    MotorPin(mc, 3, 2),
+    -100,-50)
 
 ep = EncoderPin(mc, 5)
 tcr = TopClipper(MotorPin(mc, 0, 1), -50)

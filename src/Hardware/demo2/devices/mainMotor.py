@@ -2,7 +2,7 @@ from devices.motorPin import MotorPin
 import time
 
 class MainMotor:
-    def __init__(self, mp, forward_speed=32, reset_sensor=None, encoder_pin=None):
+    def __init__(self, mp, forward_speed=-50, reset_sensor=None, encoder_pin=None):
         self.mp = mp
         self.forward_speed = forward_speed
         self.backward_speed = -forward_speed
