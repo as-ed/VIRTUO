@@ -4,8 +4,7 @@ camera:
   width: 1920
   height: 1080
   photo_delay: 5
-  focus: 10
-  black_threshold: 110
+  focus: 40
 audio:
   voices:
     - name: Female 1

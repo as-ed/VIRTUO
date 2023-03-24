@@ -1,6 +1,6 @@
 import os
 import re
-from typing import Tuple, Optional, List
+from typing import Tuple, Optional, List, Union
 
 import cv2
 from nltk.tokenize import sent_tokenize
@@ -8,13 +8,15 @@ import numpy as np
 import pytesseract
 from pytesseract import Output
 from spellchecker import SpellChecker
-from ocr import page_dewarp
+from config import CFG
+from ocr.camera import Camera
+from ocr.page_dewarp import dewarp
 
 
 _test_page = -1
 
 
-def get_text(img: np.ndarray, book_loc: Optional[str], page_nr: int = 0, prev_sentence: str = "", test_mode: bool = False) -> Tuple[str, str]:
+def get_text(img: np.ndarray, book_loc: Optional[str], side: Camera, page_nr: int = 0, prev_sentence: str = "", test_mode: bool = False) -> Tuple[str, str]:
 	"""
 	Converts image to text.
 	:param img: image as a numpy array of RGB values
@@ -29,14 +31,16 @@ def get_text(img: np.ndarray, book_loc: Optional[str], page_nr: int = 0, prev_se
 		_test_page = (_test_page + 1) % len(_TEST_TEXT)
 		return _post_processing(_TEST_TEXT[_test_page], prev_sentence)
 
-	dewarped = _pre_processing(img)
+	_save_img(img, book_loc, f"{page_nr}_original")
+
+	dewarped = _pre_processing(img, side, book_loc, page_nr)
 	bboxes = _extract_bboxes(dewarped)
-	main_body = _extract_main_body(dewarped, bboxes)
+	main_body = _extract_main_body(dewarped, bboxes, book_loc, page_nr)
 	_save_img(main_body, book_loc, page_nr)
 
 	return _post_processing(_ocr(main_body), prev_sentence)
 
-def _extract_main_body(dewarped: np.ndarray, bboxes: List[Tuple[int]]) -> np.ndarray:
+def _extract_main_body(dewarped: np.ndarray, bboxes: List[Tuple[int]], book_loc: str, page_nr: int) -> np.ndarray:
 	mask = np.zeros(dewarped.shape, dtype=np.uint8)
 
 	if len(bboxes) == 0:
@@ -53,13 +57,18 @@ def _extract_main_body(dewarped: np.ndarray, bboxes: List[Tuple[int]]) -> np.nda
 	max_y2_bbox = max(bboxes, key=lambda bbox: bbox[1] + bbox[3])
 	max_y2 = max_y2_bbox[1] + max_y2_bbox[3]
 
+	_save_img(mask, book_loc, f"{page_nr}_mask")
+
 	return (mask & dewarped)[max(0, min_y1 - 20) : max_y2 + 20, max(0, min_x1 - 20) : max_x2 + 20]
 
 
-def _pre_processing(img: np.ndarray) -> np.ndarray:
+def _pre_processing(img: np.ndarray, side: Camera, book_loc: str, page_nr: int) -> np.ndarray:
 	# Rotate image by 90 degrees as camera returns a landscape orientation
-	rotated = cv2.rotate(img, cv2.ROTATE_90_COUNTERCLOCKWISE)
-	return page_dewarp.dewarp(rotated)
+	if side == Camera.left:
+		rotated = cv2.rotate(img, cv2.ROTATE_90_CLOCKWISE)
+	else:
+		rotated = cv2.rotate(img, cv2.ROTATE_90_COUNTERCLOCKWISE)
+	return dewarp(rotated)
 
 
 def _extract_bboxes(img: np.ndarray) -> List[Tuple[int]]:
@@ -89,7 +98,7 @@ def _extract_bboxes(img: np.ndarray) -> List[Tuple[int]]:
 	return list(map(cv2.boundingRect, contours))
 
 
-def _save_img(img: np.ndarray, book_loc: str, page_nr: int) -> None:
+def _save_img(img: np.ndarray, book_loc: str, page_nr: Union[int, str]) -> None:
 	path = os.path.join(book_loc, "pages")
 	os.makedirs(path, exist_ok=True)
 	cv2.imwrite(os.path.join(path, f"{page_nr}.png"), img)

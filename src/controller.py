@@ -245,7 +245,7 @@ class _Controller:
 		while not last_page and not self._stop_event.is_set():
 			# OCR
 			cam = cameras[self._metadata["pages"] % 2]
-			text, self._metadata["last_sentence"] = get_text(None if self.test_mode else take_photo(cam), book_path, self._metadata["pages"], self._metadata["last_sentence"], self.test_mode)
+			text, self._metadata["last_sentence"] = get_text(None if self.test_mode else take_photo(cam), book_path, cam, self._metadata["pages"], self._metadata["last_sentence"], self.test_mode)
 
 			# page flipping
 			if cam == Camera.right:

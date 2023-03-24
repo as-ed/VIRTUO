@@ -23,7 +23,10 @@ class Camera(Enum):
 
 
 def init_camera() -> None:
-	capture_thread_input.put((Camera.left, CFG["camera"]["init_time"], SimpleQueue()))
+	return_queue = SimpleQueue()
+	capture_thread_input.put((Camera.left, CFG["camera"]["init_time"], return_queue))
+	return_queue.get()
+	capture_thread_input.put((Camera.right, CFG["camera"]["init_time"], SimpleQueue()))
 
 
 def take_photo(camera: Camera) -> np.ndarray:
@@ -39,7 +42,8 @@ def _capture(camera: Camera, calibration_delay: float) -> cv2.VideoCapture:
 	cam.set(cv2.CAP_PROP_FRAME_WIDTH, CFG["camera"]["width"])
 	cam.set(cv2.CAP_PROP_FRAME_HEIGHT, CFG["camera"]["height"])
 	cam.set(cv2.CAP_PROP_AUTOFOCUS, 0)
-	cam.set(cv2.CAP_PROP_FOCUS, CFG["camera"]["focus"])
+	cam.set(cv2.CAP_PROP_FOCUS, CFG["camera"]["focus"][camera.name])
+	cam.set(cv2.CAP_PROP_FORMAT, cv2.CV_32F)
 
 	# wait for calibration delay
 	if CFG["web"]["host"] == "localhost":

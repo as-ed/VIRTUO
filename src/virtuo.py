@@ -29,4 +29,4 @@ if __name__ == "__main__":
 
 	# TODO start listening for button presses
 
-	server.run(host=CFG["web"]["host"], port=CFG["web"]["port"], debug=CFG["web"]["host"] == "localhost")
+	server.run(host=CFG["web"]["host"], port=CFG["web"]["port"], debug=False)#CFG["web"]["host"] == "localhost")

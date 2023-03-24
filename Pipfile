@@ -19,6 +19,7 @@ ffmpeg-python = "==0.2.0"
 pydub = "==0.25.1"
 mutagen = "==1.46.0"
 pypandoc = "==1.11"
+scipy = "==1.10.1"
 
 [dev-packages]
 jupyter = "*"
