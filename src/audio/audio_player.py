@@ -137,7 +137,7 @@ class AudioPlayer:
 
 	@property
 	def active(self) -> bool:
-		return self._player.playlist_pos >= 0
+		return (pos := self._player.playlist_pos) is not None and pos >= 0
 
 	@property
 	def paused(self) -> bool:

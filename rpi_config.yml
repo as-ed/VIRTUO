@@ -1,10 +1,24 @@
 camera:
   left: 0
-  right: 0
-  width: 1920
-  height: 1080
-  photo_delay: 5
-  focus: 40
+  right: 2
+  width: 2304
+  height: 1296
+  photo_delay: 2
+  init_time: 5
+  focus:
+    left: 45
+    right: 40
+  crop:
+    left:
+      top: 370
+      right: 75
+      bottom: 250
+      left: 0
+    right:
+      top: 400
+      right: 0
+      bottom: 200
+      left: 0
 audio:
   voices:
     - name: Female 1

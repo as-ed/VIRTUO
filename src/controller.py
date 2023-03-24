@@ -6,13 +6,13 @@ from queue import SimpleQueue
 import re
 from threading import Thread, Event, Lock
 from time import sleep
-from typing import List, Optional, Tuple, Any, Dict
+from typing import List, Optional, Any, Dict
 
 from audio.audio_player import AudioPlayer
 from audio.tts import TTS
 from config import CFG, settings
 from hw.flipper import flip_page
-from ocr.camera import Camera, take_photo
+from ocr.camera import Camera, take_photo, init_camera
 from ocr.img_to_text import get_text
 
 
@@ -33,6 +33,7 @@ class _Controller:
 		self._scan_start_stop_lock = Lock()
 		self.audio_queue = SimpleQueue()
 		self.test_mode = False
+		self.cams_inited = False
 
 		self._books = []
 		for book_dir in os.scandir(CFG["book_location"]):
@@ -57,6 +58,10 @@ class _Controller:
 		self._books.sort(key=lambda b: b["time"])
 
 	def scan(self, listen: bool, book: str = None) -> Optional[str]:
+		if not self.cams_inited:
+			init_camera()
+			self.cams_inited = True
+
 		with self._scan_start_stop_lock:
 			if self._scanning is None:
 				# not already scanning book

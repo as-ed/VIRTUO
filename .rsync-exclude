@@ -8,3 +8,6 @@ Pipfile.lock
 *.ipynb
 google_cloud_credentials.json
 run
+settings.yml
+default_settings.yml
+loc.py

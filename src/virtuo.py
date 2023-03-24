@@ -25,7 +25,10 @@ if __name__ == "__main__":
 	if parser.parse_args().test:
 		cont.test_mode = True
 	else:
-		init_camera()
+		if init_camera():
+			cont.cams_inited = True
+		else:
+			print("Cameras not connected")
 
 	# TODO start listening for button presses
 
