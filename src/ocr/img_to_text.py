@@ -8,7 +8,7 @@ import numpy as np
 import pytesseract
 from pytesseract import Output
 from spellchecker import SpellChecker
-from page_dewarp import page_dewarp
+from ocr import page_dewarp
 
 
 _test_page = -1
