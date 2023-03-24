@@ -20,82 +20,54 @@ bc = BaseClipper(
     -100,-50)
 
 ep = EncoderPin(mc, 5)
-tcr = TopClipper(MotorPin(mc, 0, 1), -50)
-tcl = TopClipper(MotorPin(mc, 4, 1), 50)
+tcl = TopClipper(MotorPin(mc, 0, 1), 100)
+tcr = TopClipper(MotorPin(mc, 5, 2), 100)
 
 def stop():
     mc.stop_motors(1)
     mc.stop_motors(2)
 
-def turn_page(steps=10, verbose=False):
-    mm.reset()
+def inter(i=True):
+    if i:
+        input()
 
-    # Move arm to right angle
-    mm.to_angle(4, verbose=verbose)
+def turn_page(verbose=True, interrupt=True):
+    # TODO: Reset Position...
+    if input("Is the system reset?(y/n)") != 'y':
+        return
 
-    # R clipper up
-    tcr.unclip(verbose=verbose)
+    actions = [
+        lambda: mm.to_angle(15, verbose=verbose),
+        lambda: tcr.unclip(verbose=verbose),
+        lambda: f.on(),
+        lambda: s.down(0.6),
+        lambda: mm.to_angle(30, verbose=verbose),
+        lambda: time.sleep(1),
+        lambda: mm.to_angle(25, verbose=verbose),
+        lambda: tcr.clip(verbose=verbose),
+        lambda: bc.unclip(verbose=verbose),
+        lambda: mm.to_angle(20, verbose=verbose),
+        lambda: bc.clip(verbose=verbose),
+        lambda: f.off(),
+        lambda: s.up(1.0),
+        lambda: mm.to_angle(25, verbose=verbose),
+        lambda: tcr.unclip(verbose=verbose),
+        lambda: s.down(2.0),
+        lambda: mm.to_angle(10, verbose=verbose),
+        lambda: tcr.clip(verbose=verbose),
+        lambda: mm.to_angle(15, verbose=verbose),
+        lambda: s.up(2.5),
+        lambda: mm.to_angle(0, verbose=verbose)
+    ]
 
-    # Set Slider to correct height
-    if verbose:
-        print("[INFO] Moving slider down...")
-    s.down_step(steps)
+    for a in actions:
+        if verbose:
+            print("[INFO] Executing action " + str(actions.index(a)))
+        a()
+        inter(interrupt)
 
-    # Fans on
-    if verbose:
-        print("[INFO] Turing fans on...")
-    f.on()
 
-    # Move onto page
-    if verbose:
-        print("[INFO] Moving onto page...")
-    mm.to_angle(0, verbose=verbose)
 
-    # Wait
-    if verbose:
-        print("[INFO] Waiting for page to attach...")
-    time.sleep(1)
-
-    # Raise page
-    if verbose:
-        print("[INFO] Raising page...")
-    mm.to_angle(3, verbose=verbose)
-
-    # R clipper falls
-    tcr.clip(verbose=verbose)
-
-    # Base clipper raises
-    bc.unclip(verbose=verbose)
-
-    # Turing page
-    mm.to_angle(6, verbose=verbose)
-
-    # Base clipper falls
-    bc.clip(verbose=verbose)
-
-    # Fans off
-    if verbose:
-        print("[INFO] Turning fans off...")
-    f.off()
-
-    # Raise slider
-    if verbose:
-        print("[INFO] Raising slider...")
-    s.up(0.5)
-
-    # Back to 2
-    mm.to_angle(3, verbose=verbose)
-    s.down(0.5)
-    tcl.unclip(verbose=verbose)
-    mm.to_angle(5)
-    tcl.clip(verbose=verbose)
-    mm.to_angle(3)
-    s.up(0.5)
-
-    #Resetting
-    if verbose:
-        print("[INFO] Resetting...")
-    mm.reset(verbose=verbose)
 
 def reset(verbose=False):
     if verbose:
@@ -145,6 +117,7 @@ def calibrate_slider(time_unit=0.08, slider_width=8, total_height=16, verbose=Fa
 
 
 def main():
+
     stop()
 
 if __name__ == "__main__":

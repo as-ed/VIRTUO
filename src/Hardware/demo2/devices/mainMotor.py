@@ -33,17 +33,17 @@ class MainMotor:
             print("[INFO] moving to angle " + str(target_angle))
 
         angle = self.ep.get_angle(verbose=verbose)
-        while angle != target_angle:
-            if angle > target_angle:
+        if angle > target_angle:
+            while angle > target_angle:
+                angle = self.ep.get_angle(verbose=verbose)
                 self.backward(0.2)
-
-                if self.reset_sensor.read() == 1:
-                    self.set_angle(0)
-                    break
-            elif angle < target_angle:
+                time.sleep(0.1)
+        else:
+            while angle < target_angle:
+                angle = self.ep.get_angle(verbose=verbose)
                 self.forward(0.2)
+                time.sleep(0.1)
 
-            time.sleep(0.1)
             angle = self.ep.get_angle(verbose=verbose)
 
         if verbose:

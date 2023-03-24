@@ -31,8 +31,8 @@ class BaseClipper:
     def unclip(self, float=True, verbose=False):
         if verbose:
             print("[INFO] Base Clipper unclipping...")
-        self.retract()
         self.rise()
+        self.retract()
         if float:
             time.sleep(0.2)
             self.float()
