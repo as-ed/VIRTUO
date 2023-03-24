@@ -25,8 +25,7 @@ if __name__ == "__main__":
 	if parser.parse_args().test:
 		cont.test_mode = True
 	else:
-		pass
-		#init_camera()
+		init_camera()
 
 	# TODO start listening for button presses
 

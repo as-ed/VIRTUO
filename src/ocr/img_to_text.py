@@ -1,6 +1,6 @@
 import os
 import re
-from typing import Tuple, Optional, List
+from typing import Tuple, Optional, List, Union
 
 import cv2
 from nltk.tokenize import sent_tokenize
@@ -9,6 +9,7 @@ import pytesseract
 from pytesseract import Output
 from spellchecker import SpellChecker
 
+from config import CFG
 from ocr.camera import Camera
 from ocr.page_dewarp import dewarp
 
@@ -33,7 +34,7 @@ def get_text(img: np.ndarray, book_loc: Optional[str], side: Camera, page_nr: in
 
 	_save_img(img, book_loc, f"{page_nr}_original")
 
-	dewarped = _pre_processing(img, side)
+	dewarped = _pre_processing(img, side, book_loc, page_nr)
 	bboxes = _extract_bboxes(dewarped)
 	main_body = _extract_main_body(dewarped, bboxes, book_loc, page_nr)
 	_save_img(main_body, book_loc, page_nr)
@@ -41,8 +42,10 @@ def get_text(img: np.ndarray, book_loc: Optional[str], side: Camera, page_nr: in
 	return _post_processing(_ocr(main_body), prev_sentence)
 
 
-def _crop(img: np.ndarray):
-	gray = cv2.cvtColor(img, cv2.COLOR_BGR2GRAY)
+def _crop(img: np.ndarray, side: Camera):
+	static_crop = img[CFG["camera"]["crop"][side.name]["top"]:-CFG["camera"]["crop"][side.name]["bottom"]]
+
+	gray = cv2.cvtColor(static_crop, cv2.COLOR_BGR2GRAY)
 
 	# Apply soft blurring to get rid of noise
 	blur = cv2.GaussianBlur(gray, (5, 3), 0)
@@ -56,7 +59,7 @@ def _crop(img: np.ndarray):
 	eroded = cv2.erode(eroded, cv2.getStructuringElement(cv2.MORPH_RECT, (5, 3)), iterations=1)
 
 	# Binarise again but with a higher threshold
-	#_, binarised = cv2.threshold(eroded, 150, 255, cv2.THRESH_BINARY)
+	_, binarised = cv2.threshold(eroded, 150, 255, cv2.THRESH_BINARY)
 
 	# Extract Contours
 	contours, hierarchy = cv2.findContours(eroded, cv2.RETR_LIST, cv2.CHAIN_APPROX_SIMPLE)
@@ -69,11 +72,11 @@ def _crop(img: np.ndarray):
 		if h / w > 8:
 			continue
 
-		if x < 0.05 * img.shape[1] or x + w > 0.95 * img.shape[1]:
-			continue
+		#if x < 0.05 * img.shape[1] or x + w > 0.95 * img.shape[1]:
+		#	continue
 
-		if y < 0.05 * img.shape[0] or y + h > 0.95 * img.shape[0]:
-			continue
+		#if y < 0.05 * img.shape[0] or y + h > 0.95 * img.shape[0]:
+		#	continue
 
 		if w * h < img.shape[0] * img.shape[1] * 0.01:
 			continue
@@ -119,14 +122,15 @@ def _extract_main_body(dewarped: np.ndarray, bboxes: List[Tuple[int]], book_loc:
 	return (mask & dewarped)[max(0, min_y1 - 20) : max_y2 + 20, max(0, min_x1 - 20) : max_x2 + 20]
 
 
-def _pre_processing(img: np.ndarray, side: Camera) -> np.ndarray:
+def _pre_processing(img: np.ndarray, side: Camera, book_loc: str, page_nr: int) -> np.ndarray:
 	# Rotate image by 90 degrees as camera returns a landscape orientation
 	if side == Camera.left:
 		rotated = cv2.rotate(img, cv2.ROTATE_90_CLOCKWISE)
 	else:
 		rotated = cv2.rotate(img, cv2.ROTATE_90_COUNTERCLOCKWISE)
-	#cropped = _crop(rotated)
-	return dewarp(rotated)
+	cropped = _crop(rotated, side)
+	_save_img(cropped, book_loc, f"{page_nr}_cropped")
+	return dewarp(cropped)
 
 
 def _extract_bboxes(img: np.ndarray) -> List[Tuple[int]]:
@@ -156,7 +160,7 @@ def _extract_bboxes(img: np.ndarray) -> List[Tuple[int]]:
 	return list(map(cv2.boundingRect, contours))
 
 
-def _save_img(img: np.ndarray, book_loc: str, page_nr: int) -> None:
+def _save_img(img: np.ndarray, book_loc: str, page_nr: Union[int, str]) -> None:
 	path = os.path.join(book_loc, "pages")
 	os.makedirs(path, exist_ok=True)
 	cv2.imwrite(os.path.join(path, f"{page_nr}.png"), img)
