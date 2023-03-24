@@ -891,7 +891,7 @@ def remap_image(name, img, small, page_dims, params):
     return thresh
 
 
-def dewarp(img, should_crop):
+def dewarp(img, should_crop=True):
     if DEBUG_LEVEL > 0 and DEBUG_OUTPUT != "file":
         cv2.namedWindow(WINDOW_NAME)
 
@@ -924,7 +924,7 @@ def dewarp(img, should_crop):
         rx2 = int((img.shape[1] / small.shape[1]) * x2)
         ry2 = int((img.shape[0] / small.shape[0]) * y2)
 
-        return dewarp(img[ry1:ry2, rx1:rx2], False)
+        return dewarp(img[ry1:ry2, rx1:rx2], should_crop=False)
 
     if len(spans) < 3:
         print("Failed to dewarp. Only ", len(spans), "text spans")
