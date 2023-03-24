@@ -924,7 +924,7 @@ def dewarp(img, should_crop=True):
     pagemask, page_outline = get_page_extents(small)
 
     cinfo_list = get_contours(name, small, pagemask, "text")
-    spans, cropped_coords = assemble_spans(small, cinfo_list, should_crop=False)
+    spans, cropped_coords = assemble_spans(small, cinfo_list, should_crop)
 
     if should_crop:
         x1, y1, x2, y2 = cropped_coords
