@@ -32,13 +32,113 @@ def get_text(img: np.ndarray, book_loc: Optional[str], side: Camera, page_nr: in
 		return _post_processing(_TEST_TEXT[_test_page], prev_sentence)
 
 	_save_img(img, book_loc, f"{page_nr}_original")
+	# TODO: check for internet_connection
+	# if not internet_connection:
+	#     bboxes = _extract_bboxes(dewarped)
+	#     main_body = _extract_main_body(dewarped, bboxes)
+	#     _save_img(main_body, book_loc, page_nr)
+	# 	  return _post_processing(_ocr(main_body), prev_sentence)
 
-	dewarped = _pre_processing(img, side, book_loc, page_nr)
-	bboxes = _extract_bboxes(dewarped)
-	main_body = _extract_main_body(dewarped, bboxes, book_loc, page_nr)
-	_save_img(main_body, book_loc, page_nr)
+	dewarped = _pre_processing(img, side, book_log, page_nr)
+	response = _google_ocr_request(dewarped)
 
-	return _post_processing(_ocr(main_body), prev_sentence)
+	if not response:
+		pass
+
+	blocks = _parse_google_ocr_response(response)
+	main_text = _get_google_ocr_page_main_body(blocks)
+
+	return _post_processing(main_text, prev_sentence)
+
+
+def _google_ocr_client():
+	client = vision_v1.ImageAnnotatorClient()
+
+	return client
+
+
+def _google_ocr_request(img: np.ndarray):
+	client = _google_ocr_client()
+
+	success, encoded_image = cv2.imencode(".png", img)
+	content = encoded_image.tobytes()
+
+	if not success:
+		return None
+
+	image = vision_v1.Image(content=content)
+
+	response = client.document_text_detection(
+		image=image, image_context={"language_hints": ["en"]}
+	)
+
+	if response.error.message:
+		return None
+
+	return response
+
+
+def _parse_google_ocr_response(response):
+	breaks = vision_v1.types.TextAnnotation.DetectedBreak.BreakType
+	blocks = []
+
+	for pages in response.full_text_annotation.pages:
+		for block in pages.blocks:
+			block_text = ""
+			for paragraph in block.paragraphs:
+				for word in paragraph.words:
+					for symbol in word.symbols:
+						word_text = symbol.text
+						if symbol.property.detected_break.type_:
+							break_text = ""
+							if (
+								symbol.property.detected_break.type_ == breaks.SPACE
+								or symbol.property.detected_break.type_ == breaks.LINE_BREAK
+								or symbol.property.detected_break.type_
+								== breaks.EOL_SURE_SPACE
+								or symbol.property.detected_break.type_
+								== breaks.EOL_SURE_SPACE
+							):
+								break_text = " "
+							elif symbol.property.detected_break.type_ == breaks.HYPHEN:
+								break_text = "-"
+							else:
+								break_text = ""
+							if symbol.property.detected_break.is_prefix:
+								word_text = break_text + word_text
+							else:
+								word_text = word_text + break_text
+						block_text += word_text
+			blocks.append(block_text)
+
+	return blocks
+
+
+def _get_google_ocr_page_number(blocks: List[str]) -> Optional[int]:
+	for text in blocks:
+		if re.match(r"^\d+$", text.strip()):
+			return int(text)
+
+	return None
+
+
+def _get_google_ocr_page_title(blocks: List[str]) -> Optional[str]:
+	for text in blocks:
+		if len(text) < 20:
+			return text
+
+	return None
+
+
+def _get_google_ocr_page_main_body(blocks: List[str]) -> str:
+	output = ""
+
+	for text in blocks:
+		if len(text) >= 20:
+			output += text
+
+	return " ".join(blocks)
+
 
 def _extract_main_body(dewarped: np.ndarray, bboxes: List[Tuple[int]], book_loc: str, page_nr: int) -> np.ndarray:
 	mask = np.zeros(dewarped.shape, dtype=np.uint8)
@@ -68,7 +168,9 @@ def _pre_processing(img: np.ndarray, side: Camera, book_loc: str, page_nr: int) 
 		rotated = cv2.rotate(img, cv2.ROTATE_90_CLOCKWISE)
 	else:
 		rotated = cv2.rotate(img, cv2.ROTATE_90_COUNTERCLOCKWISE)
-	return dewarp(rotated)
+
+	_save_img(rotated, book_loc, f"{page_nr}_cropped")
+	return dewarp(cropped)
 
 
 def _extract_bboxes(img: np.ndarray) -> List[Tuple[int]]:
