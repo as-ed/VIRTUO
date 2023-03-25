@@ -9,14 +9,16 @@ if CFG["web"]["host"] != "localhost":
 
 _BUTTONS = {
 	"rewind": (0, cont.rewind),
-	"play/pause": (0, cont.scan_play_pause),
-	"fast-forward": (0, cont.fast_forward),
-	"stop": (0, cont.stop_scan),
-	"help": (0, cont.help)
+	"play/pause": (1, cont.scan_play_pause),
+	"fast-forward": (2, cont.fast_forward),
+	"stop": (3, cont.stop_scan),
+	"help": (4, cont.help)
 }
 
 
 def setup_buttons() -> None:
+	GPIO.setmode(GPIO.BCM)
+
 	for pin, callback in _BUTTONS.values():
 		_setup_button(pin, callback)
 

@@ -17,14 +17,14 @@ from ocr.page_dewarp import dewarp
 _test_page = -1
 
 
-def get_text(img: np.ndarray, book_loc: Optional[str], side: Camera, page_nr: int = 0, prev_sentence: str = "", test_mode: bool = False) -> Tuple[str, str]:
+def get_text(img: np.ndarray, book_loc: Optional[str], side: Camera, page_nr: int = 0, prev_sentence: str = "", test_mode: bool = False) -> Tuple[str, str, Optional[int], Optional[float]]:
 	"""
 	Converts image to text.
 	:param img: image as a numpy array of RGB values
 	:param book_loc: location where the digitized book is stored
 	:param page_nr: number of the current page
 	:param prev_sentence: last sentence of the previous page
-	:return: tuple of 2 strings: (page text except last sentence, last (potentially incomplete) sentence)
+	:return: tuple of (page text except last sentence, last (potentially incomplete) sentence, page number, position of the right page edge (0.0 - 1.0, relative frame width))
 	"""
 	global _test_page
 

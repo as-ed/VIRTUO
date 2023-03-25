@@ -71,7 +71,7 @@ class TTS:
 	def _picotts(self, text: str) -> bytes:
 		with NamedTemporaryFile(suffix=".wav") as f:
 			run(["pico2wave",
-					"-l", self._voice_name if self._offline else CFG["audio"]["voices"][self._offline_voice]["voice_name"],
+					"-l", self._voice_name if self._offline else CFG["audio"]["voices"][self.offline_voice]["voice_name"],
 					"-w", f.name],
 				input=text.encode("utf8"))
 
