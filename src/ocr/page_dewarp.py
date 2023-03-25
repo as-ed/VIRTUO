@@ -15,7 +15,7 @@ import cv2
 from PIL import Image
 import numpy as np
 import scipy.optimize
-import math
+import os
 
 # for some reason pylint complains about cv2 members being undefined :(
 # pylint: disable=E1101
@@ -284,7 +284,7 @@ def get_mask(name, small, masktype):
         if DEBUG_LEVEL >= 3:
             debug_show(name, 0.1, "thresholded", mask)
 
-        mask = cv2.dilate(mask, box(9, 1))
+        mask = cv2.dilate(mask, box(7, 1))
 
         if DEBUG_LEVEL >= 3:
             debug_show(name, 0.2, "dilated", mask)
@@ -536,13 +536,15 @@ def assemble_spans(small, cinfo_list, should_crop):
         # follow successors til end of span
         while cinfo:
             # remove from list (sadly making this loop *also* O(n^2)
-            cinfo_list.remove(cinfo)
-            # add to span
-            cur_span.append(cinfo)
-            width += cinfo.local_xrng[1] - cinfo.local_xrng[0]
-            # set successor
-            cinfo = cinfo.succ
-
+            try:
+                cinfo_list.remove(cinfo)
+                # add to span
+                cur_span.append(cinfo)
+                width += cinfo.local_xrng[1] - cinfo.local_xrng[0]
+                # set successor
+                cinfo = cinfo.succ
+            except:
+                break
         # add if long enough
         if width > SPAN_MIN_WIDTH:
             spans.append(cur_span)
@@ -564,10 +566,11 @@ def assemble_spans(small, cinfo_list, should_crop):
                 actual_spans.append(cropped_span)
 
         random.shuffle(actual_spans)
-        return actual_spans[:22], (x1, y1, x2, y2)
+
+        return actual_spans[:25], (x1, y1, x2, y2)
     else:
         random.shuffle(spans)
-        return spans[:22], None
+        return spans[:25], None
 
 
 def sample_spans(shape, spans):
@@ -650,8 +653,7 @@ def keypoints_from_samples(name, small, pagemask, page_outline, span_points):
         ycoords.append(py_coords.mean() - py0)
         xcoords.append(px_coords - px0)
 
-    if DEBUG_LEVEL >= 2:
-        visualize_span_points(name, small, span_points, corners)
+    visualize_span_points(name, small, span_points, corners)
 
     return corners, np.array(ycoords), xcoords
 
@@ -721,6 +723,7 @@ def crop(small, spans):
         y = max(0, max_bbox[1] - 10)
         w = max_bbox[2] + 10
         h = max_bbox[3] + 10
+
         return (x, y, x + w, y + h)
 
     return (0, 0, small.shape[1], small.shape[0])
@@ -752,8 +755,6 @@ def visualize_span_points(name, small, span_points, corners):
     cv2.polylines(
         display, [norm2pix(small.shape, corners, True)], True, (255, 255, 255)
     )
-
-    debug_show(name, 3, "span points", display)
 
 
 def imgsize(img):
@@ -880,10 +881,10 @@ def remap_image(name, img, small, page_dims, params):
     thresh = cv2.adaptiveThreshold(
         remapped,
         255,
-        cv2.ADAPTIVE_THRESH_MEAN_C,
+        cv2.ADAPTIVE_THRESH_GAUSSIAN_C,
         cv2.THRESH_BINARY_INV,
         ADAPTIVE_WINSZ,
-        9,
+        21,
     )
 
     pil_image = Image.fromarray(thresh)
@@ -901,7 +902,7 @@ def remap_image(name, img, small, page_dims, params):
     return thresh
 
 
-def dewarp(img, should_crop=True):
+def dewarp(img, should_crop=True, original_img=None):
     if DEBUG_LEVEL > 0 and DEBUG_OUTPUT != "file":
         cv2.namedWindow(WINDOW_NAME)
 
@@ -926,6 +927,12 @@ def dewarp(img, should_crop=True):
     cinfo_list = get_contours(name, small, pagemask, "text")
     spans, cropped_coords = assemble_spans(small, cinfo_list, should_crop)
 
+    if len(spans) < 5:
+        print("Failed to dewarp. Only ", len(spans), "text spans")
+        if original_img:
+            return cv2.cvtColor(original_img, cv2.COLOR_BGR2GRAY)
+        return cv2.cvtColor(img, cv2.COLOR_BGR2GRAY)
+
     if should_crop:
         x1, y1, x2, y2 = cropped_coords
 
@@ -934,11 +941,9 @@ def dewarp(img, should_crop=True):
         rx2 = int((img.shape[1] / small.shape[1]) * x2)
         ry2 = int((img.shape[0] / small.shape[0]) * y2)
 
-        return dewarp(img[ry1:ry2, rx1:rx2], False)
+        cropped = img[ry1:ry2, rx1:rx2]
 
-    if len(spans) < 3:
-        print("Failed to dewarp. Only ", len(spans), "text spans")
-        return img
+        return dewarp(cropped, should_crop=False, original_img=img)
 
     span_points = sample_spans(small.shape, spans)
 
