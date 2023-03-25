@@ -3,9 +3,9 @@
 set -e
 
 if [[ "$1" =~ ^-.* ]]; then
-	ip="${2:-virtuo.local}"
+	ip="${2:-veemon.local}"
 else
-	ip="${1:-virtuo.local}"
+	ip="${1:-veemon.local}"
 fi
 
 if ! ping -c 1 $ip > /dev/null 2> /dev/null; then
