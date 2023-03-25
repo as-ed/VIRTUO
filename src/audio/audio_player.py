@@ -37,6 +37,9 @@ class AudioPlayer:
 		if pos is not None:
 			self.seek(pos)
 
+	def play_file(self, file: str) -> None:
+		self._player.play(file)
+
 	def add_audio(self, audio: bytes, fmt: str, page: int, play: bool) -> None:
 		self.write_to_file(audio, fmt, self._current_book, page)
 		self._add_to_playlist(f"{page}.mp3", play)

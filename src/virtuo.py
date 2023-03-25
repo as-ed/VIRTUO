@@ -2,6 +2,7 @@ from argparse import ArgumentParser
 
 from config import CFG
 from controller import controller as cont
+from hw.button import setup_buttons
 from ocr.camera import init_camera
 from server import server
 
@@ -30,6 +31,7 @@ if __name__ == "__main__":
 		else:
 			print("Cameras not connected")
 
-	# TODO start listening for button presses
+	if CFG["web"]["host"] != "localhost":
+		setup_buttons()
 
 	server.run(host=CFG["web"]["host"], port=CFG["web"]["port"], debug=False)#CFG["web"]["host"] == "localhost")

@@ -25,6 +25,7 @@ class _Controller:
 		self._scanning = None
 		self._listening = False
 		self._player = AudioPlayer(settings["volume"])
+		self._help_player = AudioPlayer(settings["volume"])
 		self._tts = TTS(settings["voice"], settings["offline_voice"])
 		self._metadata = {}
 		self.metadata_lock = Lock()
@@ -78,6 +79,7 @@ class _Controller:
 				self._scanning = book
 				self._listening = listen
 				self._scan_thread = Thread(target=self._scan, args=(book,), name="Book scan thread")
+				self._help_player.stop()
 				self._player.play(book, listened_up_to if listen else None)
 				self._scan_thread.start()
 
@@ -102,6 +104,7 @@ class _Controller:
 
 				if not self._listening and listen:
 					self._listening = listen
+					self._help_player.stop()
 					self._player.seek(listened_up_to)
 				elif self.playing:
 					self._listening = listen
@@ -113,8 +116,9 @@ class _Controller:
 				return self._scanning
 
 	def stop_scan(self) -> bool:
+		self._help_player.stop()
+
 		if self._scanning is not None:
-			book = self._scanning
 			self._stop_event.set()
 			self._scan_thread.join()
 
@@ -124,6 +128,12 @@ class _Controller:
 			return True
 
 		return False
+
+	def scan_play_pause(self) -> None:
+		if self._scanning is None or not self._listening:
+			self.scan(True)
+		else:
+			self.toggle_pause()
 
 	def toggle_pause(self) -> bool:
 		return self._player.play_pause() and self._player.active
@@ -159,6 +169,15 @@ class _Controller:
 				[b for b in self._books if b["id"] == book][0][attribute] = value
 
 		return True
+
+	def help(self) -> None:
+		if was_playing := self.playing:
+			self.pause()
+
+		self._help_player.play_file("static/help.mp3")
+
+		if was_playing:
+			self.toggle_pause()
 
 	def last_page(self, book: str) -> int:
 		with self.metadata_lock, open(os.path.join(CFG["book_location"], book, _Controller.METADATA_FILE)) as f:
@@ -200,6 +219,7 @@ class _Controller:
 			volume = 1
 
 		self._player.volume = volume
+		self._help_player.volume = volume
 		settings["volume"] = volume
 
 	@property
@@ -290,3 +310,6 @@ class _Controller:
 
 
 controller = _Controller()
+
+
+_HELP_TEXT = "I am Virtuo, your accessible book scanning robot. I can scan your books and read them out to you. To have a book read to you just place it on top of the book tray and slide it forwards until it hits the stop. When placing the book on the tray, rotate it so that the top side faces towards you and the front cover is on the right side when opened. Open it up and slide the clipper mechanism over the book cover to secure it. Then open it up to the page where you want to start listening and press the play button. You can control the playback using the rewind and fast-forward buttons and the play button for pausing and resuming. To adjust the volume you can use the dial on the right hand side and to stop the scan or reset the robot to scan another book just press the reset button. You can access and manage a list of all your scanned books and access more advanced options like changing the voice, using the web interface. To access it, just connect any device with a web browser to the same WiFi network as the robot and visit http://virtuo.local, that is Victor, India, Romeo, Tango, Uniform, Oscar, dot local."
