@@ -1,4 +1,4 @@
-from devices.motorPin import MotorPin
+from control.devices.motorPin import MotorPin
 import time
 
 class MainMotor:
@@ -38,6 +38,10 @@ class MainMotor:
                 self.backward(0.2)
                 time.sleep(0.1)
                 angle = self.ep.get_angle(verbose=verbose)
+
+                if self.reset_sensor.read() == 1:
+                    self.set_angle(0)
+                    break
         else:
             while angle < target_angle:
                 self.forward(0.2)
@@ -56,12 +60,12 @@ class MainMotor:
                 print("[INFO] No reset sensor setup.")
             return
 
-        self.mp.move(self.backward_speed)
         if verbose:
             print("[INFO] Starting reset.")
 
         while self.reset_sensor.read() == 0:
-            pass
+            self.backward(0.2)
+            time.sleep(0.2)
 
         if verbose:
             print("[INFO] Reset finished.")

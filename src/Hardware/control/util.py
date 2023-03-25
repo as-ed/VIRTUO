@@ -1,5 +1,5 @@
 import time
-import gpioi
+import control.gpioi
 
 def move_motors(mc, motors, values, duration=None):
     for motor, value in zip(motors, values):

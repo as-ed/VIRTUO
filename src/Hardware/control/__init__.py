@@ -1,8 +1,8 @@
 import motors2
 
-from devices import *
-from gpioi import *
-from util import *
+from control.devices import *
+from control.gpioi import *
+from control.util import *
 
 import time
 
@@ -10,14 +10,14 @@ mc = motors2.Motors()
 
 
 mm = MainMotor(MotorPin(mc, 0, 2),
-               reset_sensor=Button(8),
+               reset_sensor=Button(10),
                encoder_pin=EncoderPin(mc, 5, True))
 f = FanGroup(mc, [1,2,3], 1)
 s = Slider([MotorPin(mc, 1, 2), MotorPin(mc, 2, 2)])
 bc = BaseClipper(
     MotorPin(mc, 5, 1),
     MotorPin(mc, 3, 2),
-    -100,-50)
+    -60, 30)
 
 ep = EncoderPin(mc, 5)
 tcr = TopClipper(MotorPin(mc, 0, 1), 100)
@@ -27,19 +27,19 @@ def stop():
     mc.stop_motors(1)
     mc.stop_motors(2)
 
-def inter(i=True):
-    if i:
-        input()
+def run_actions(actions, verbose=True, interrupt=False):
+    for i, action in enumerate(actions):
+        func, text = action
+        if verbose:
+            print("[INFO] Executing action {index} \"{text}\"".format(index=i, text=text))
+        func()
+        if interrupt:
+            input()
 
-def turn_page(down_var=0.5, verbose=True, interrupt=True):
-    # TODO: Reset Position...
-    if input("Is the system reset?(y/n)") != 'y':
-        return
-
-    print(down_var)
-
+def turn_page(down_var=1.0, verbose=True, interrupt=False):
     actions = [
-        (lambda: print("RESET " * 6), "Reset!"),
+        (lambda: time.sleep(0), "Turning page with down var {down_var}".format(down_var=down_var)),
+        (lambda: mm.reset(verbose=verbose), "Making sure are is reset"),
         (lambda: bc.clip(verbose=verbose), "Making sure base is clipped"),
         (lambda: tcl.clip(verbose=verbose), "Making sure left pages are clipped"),
         (lambda: tcr.clip(verbose=verbose), "Making sure right pages are clipped"),
@@ -51,8 +51,9 @@ def turn_page(down_var=0.5, verbose=True, interrupt=True):
         (lambda: time.sleep(1), "Waiting for page to attach"),
         (lambda: mm.to_angle(3, verbose=verbose), "Making space for re-clipping"),
         (lambda: tcl.clip(verbose=verbose), "Re-clipping..."),
+        (lambda: mm.to_angle(1, verbose=verbose), "Moving arm out of the way of base clipper"),
         (lambda: bc.unclip(verbose=verbose), "Unclipping base"),
-        (lambda: mm.to_angle(6, verbose=verbose), "Moving past base clipper"),
+        (lambda: mm.to_angle(8, verbose=verbose), "Moving past base clipper"),
         (lambda: bc.clip(verbose=verbose), "Clipping base"),
         (lambda: f.off(), "Fans off"),
         (lambda: s.up(2), "Moving slider up"),
@@ -62,20 +63,27 @@ def turn_page(down_var=0.5, verbose=True, interrupt=True):
         (lambda: mm.to_angle(10), "Pushing pages into side"),
         (lambda: tcr.clip(verbose=verbose), "Re-clipping turned pages"),
         (lambda: tcl.unclip(verbose=verbose), "Unclipping unturned pages"),
-        (lambda: mm.to_angle(1, verbose=verbose), "Pushing unturned pages back"),
+        (lambda: mm.to_angle(0, verbose=verbose), "Pushing unturned pages back"),
         (lambda: tcl.clip(verbose=verbose), "Re-clipping unturned pages"),
         (lambda: mm.to_angle(5, verbose=verbose), "Re-centering main arm"),
         (lambda: s.up(2), "Moving arm to base position"),
-        (lambda: mm.to_angle(0, verbose=verbose), "Resetting arm"),
+        (lambda: mm.reset(verbose=verbose), "Resetting arm"),
     ]
 
-    for i, action in enumerate(actions):
-        func, text = action
-        if verbose:
-            print("[INFO] Executing action {index} \"{text}\"".format(index=i, text=text))
-        func()
-        inter(interrupt)
+    run_actions(actions, verbose=verbose, interrupt=interrupt)
 
+
+def load_book(verbose=True, interrupt=False):
+   actions = [
+       (lambda: mm.reset(verbose=verbose), "Resetting main motor"),
+       (lambda: mm.to_angle(5, verbose=verbose), "Moving are to middle"),
+       (lambda: s.up(2), "Making sure fans are out the way"),
+       (lambda: tcl.unclip(verbose=verbose), "Unclipping left side"),
+       (lambda: tcr.unclip(verbose=verbose), "Unclipping right side"),
+       (lambda: bc.unclip(verbose=verbose), "Unclipping base"),
+   ]
+
+   run_actions(actions, verbose=verbose, interrupt=interrupt)
 
 
 
@@ -85,7 +93,7 @@ def reset(verbose=False):
     f.off()
     if verbose:
         print("[INFO] Resetting slider")
-    s.up(0.5)
+    s.up(2.0)
     if verbose:
         print("[INFO] Floating base clipper")
     bc.float()

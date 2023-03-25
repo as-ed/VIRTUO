@@ -1,4 +1,4 @@
-from devices.motorPin import MotorPin
+from control.devices.motorPin import MotorPin
 import time
 
 class TopClipper:

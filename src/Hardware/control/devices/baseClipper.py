@@ -1,4 +1,4 @@
-from devices.motorPin import MotorPin
+from control.devices.motorPin import MotorPin
 import time
 
 class BaseClipper:
@@ -40,8 +40,12 @@ class BaseClipper:
     def clip(self, float=True, verbose=False):
         if verbose:
             print("[INFO] Base Clipper clipping...")
-        self.extend()
+        self.rise()
+        self.extender.move(self.extender_forward)
+        time.sleep(self.extend_time)
         self.fall()
+        time.sleep(self.extend_time)
+        self.extender.move(0)
         if float:
             time.sleep(0.2)
             self.float()

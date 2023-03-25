@@ -1,5 +1,5 @@
-from devices.fan import Fan
-from devices.motorPin import MotorPin
+from control.devices.fan import Fan
+from control.devices.motorPin import MotorPin
 
 class FanGroup:
     def __init__(self, mc, fan_pins, board=1):

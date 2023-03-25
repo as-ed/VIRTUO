@@ -1,4 +1,6 @@
-from gpioi.util import *
+import RPi.GPIO as GPIO
+
+GPIO.setmode(GPIO.BCM)
 
 class Button:
     def __init__(self, pin):

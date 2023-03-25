@@ -1,4 +1,4 @@
-from devices.motorPin import MotorPin
+from control.devices.motorPin import MotorPin
 
 class Fan:
     def __init__(self, pin):
