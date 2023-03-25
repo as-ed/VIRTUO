@@ -39,6 +39,7 @@ class AudioPlayer:
 
 	def play_file(self, file: str) -> None:
 		self._player.play(file)
+		self._player.wait_for_playback()
 
 	def add_audio(self, audio: bytes, fmt: str, page: int, play: bool) -> None:
 		self.write_to_file(audio, fmt, self._current_book, page)

@@ -8,7 +8,7 @@
 		<link href="static/style.css" rel="stylesheet">
 		<link rel="stylesheet" href="static/fontawesome/css/all.min.css">
 	</head>
-	<body onload="startStatusUpdates({{ "null" if scanning is none else "'" + scanning + "'"}}, {{"true" if listening else "false"}}, {{"true" if playing else "false"}}, {{"true" if paused else "false"}}, {{volume}}, {{books|length}}, -1)">
+	<body onload="startStatusUpdates({{ "null" if scanning is none else "'" + scanning + "'"}}, {{"true" if listening else "false"}}, {{"true" if playing else "false"}}, {{"true" if paused else "false"}}, {{volume}}, {{books|length}}, -1, {{page_flip_error}})">
 		<div class="header">
 			<h1>VIRTUO</h1>
 			<h4 class="subtitle">Visual Impairment Reading Technology Utilizing Outspoken language</h4>
@@ -91,5 +91,10 @@
 		<h2 class="heading">Scanned books will appear here</h2>
 		{% endif %}
 		<br><br>
+		<div id="page-flip-error" {% if page_flip_error == 0 %}class="hide-error"{% endif %}>
+			An error has occurred, the page turner has flipped multiple pages at once. Please flip back <span id="page-error-num-pages">{{page_flip_error}}</span> pages and then press the physical play button or confirm here to resume. (Remember that the top of the book is facing towards you, so you need to flip the pages from the right to the left)
+			<br><br>
+			<a class="bold" aria-label="confirm that pages were flipped back" onclick="confirmManualFlip()">I have flipped back the page{% if page_flip_error != 1 %}s{% endif %}</a>
+		</div>
 	</body>
 </html>

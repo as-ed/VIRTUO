@@ -219,6 +219,28 @@ input[type="range"]:hover::-webkit-slider-thumb {
 	display: none;
 }
 
+#page-flip-error {
+	position: fixed;
+	top: 50%;
+	left: 50%;
+	width: 700px;
+	height: 140px;
+	padding: 15px;
+	margin-left: -375px;
+	margin-top: -70px;
+	background: rgba(232, 238, 242, 0.95);
+	border-radius: 25px;
+	border: solid #FF6812;
+}
+
+.hide-error {
+	display: none;
+}
+
+#page-error-num-pages {
+	font-weight: bold;
+}
+
 @media only screen and (max-width: 1460px) {
 	hr.vr {
 		display: block;
@@ -287,6 +309,14 @@ input[type="range"]:hover::-webkit-slider-thumb {
 
 	.subtitle {
 		display: none;
+	}
+
+	#page-flip-error {
+		width: auto;
+		height: auto;
+		margin: 0 15px 0 15px;
+		left: revert;
+		top: 200px;
 	}
 }
 

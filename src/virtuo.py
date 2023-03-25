@@ -23,7 +23,9 @@ if __name__ == "__main__":
 		action="store_true",
 		help="Enable testing mode. Uses hardcoded text instead of scanning pages.")
 
-	if parser.parse_args().test:
+	args = parser.parse_args()
+
+	if args.test:
 		cont.test_mode = True
 	else:
 		if init_camera():
@@ -34,4 +36,4 @@ if __name__ == "__main__":
 	if CFG["web"]["host"] != "localhost":
 		setup_buttons()
 
-	server.run(host=CFG["web"]["host"], port=CFG["web"]["port"], debug=False)#CFG["web"]["host"] == "localhost")
+	server.run(host=CFG["web"]["host"], port=CFG["web"]["port"], debug=args.test)

@@ -6,7 +6,7 @@ from queue import SimpleQueue
 import re
 from threading import Thread, Event, Lock
 from time import sleep
-from typing import List, Optional, Any, Dict
+from typing import List, Optional, Any, Dict, Union
 
 from audio.audio_player import AudioPlayer
 from audio.tts import TTS
@@ -35,6 +35,8 @@ class _Controller:
 		self.audio_queue = SimpleQueue()
 		self.test_mode = False
 		self.cams_inited = False
+		self._page_flip_error = 0
+		self._manual_flip_confirm = Event()
 
 		self._books = []
 		for book_dir in os.scandir(CFG["book_location"]):
@@ -130,6 +132,10 @@ class _Controller:
 		return False
 
 	def scan_play_pause(self) -> None:
+		if self._page_flip_error != 0:
+			self.clear_page_flip_error()
+			return
+
 		if self._scanning is None or not self._listening:
 			self.scan(True)
 		else:
@@ -171,13 +177,10 @@ class _Controller:
 		return True
 
 	def help(self) -> None:
-		if was_playing := self.playing:
-			self.pause()
+		self._help_output("static/help.mp3")
 
-		self._help_player.play_file("static/help.mp3")
-
-		if was_playing:
-			self.toggle_pause()
+	def clear_page_flip_error(self) -> None:
+		self._manual_flip_confirm.set()
 
 	def last_page(self, book: str) -> int:
 		with self.metadata_lock, open(os.path.join(CFG["book_location"], book, _Controller.METADATA_FILE)) as f:
@@ -206,6 +209,10 @@ class _Controller:
 	@property
 	def playback_pos(self) -> float:
 		return self._player.total_pos
+
+	@property
+	def page_flip_error(self) -> int:
+		return self._page_flip_error
 
 	@property
 	def volume(self) -> float:
@@ -242,6 +249,19 @@ class _Controller:
 	def get_voices() -> List[str]:
 		return [voice["name"] for voice in CFG["audio"]["voices"]]
 
+	def _help_output(self, file: str) -> None:
+
+		if was_playing := self.playing:
+			self.pause()
+
+		sleep(1)
+		self._help_player.play_file(file)
+		sleep(1)
+
+		if was_playing:
+			self.seek(self.playback_pos - 5)
+			self.toggle_pause()
+
 	def _new_book(self) -> str:
 		now = datetime.now()
 		date = datetime.isoformat(now)[:10]
@@ -265,19 +285,56 @@ class _Controller:
 
 		cameras = (Camera.left, Camera.right)
 		last_page = False
+		page_nr = None
+		last_edge_pos = 1
 		current_book_dict = [b for b in self._books if b["id"] == book][0]
 
 		while not last_page and not self._stop_event.is_set():
 			# OCR
 			cam = cameras[self._metadata["pages"] % 2]
-			text, self._metadata["last_sentence"] = get_text(None if self.test_mode else take_photo(cam), book_path, cam, self._metadata["pages"], self._metadata["last_sentence"], self.test_mode)
 
-			# page flipping
-			if cam == Camera.right:
-				if not flip_page(self.test_mode):
-					text += " " + self._metadata["last_sentence"]
+			for i in range(2):
+				ocr_result = get_text(None if self.test_mode else take_photo(cam), book_path, cam, self._metadata["pages"], self._metadata["last_sentence"], self.test_mode)
+
+				# check if end of book reached
+				if ocr_result is None:
+					text = " " + self._metadata["last_sentence"]
 					self._metadata["last_sentence"] = ""
 					last_page = True
+					break
+
+				text, self._metadata["last_sentence"], new_page_nr, edge_pos = ocr_result
+
+				# check if page flip was successful
+				if cam == Camera.left:
+					if page_nr is None or new_page_nr == page_nr + 1:
+						page_nr = new_page_nr
+						break
+
+					# check for error in OCR page number detection
+					if new_page_nr < page_nr or new_page_nr > page_nr + 5 or (new_page_nr - page_nr) % 2 == 0:
+						page_nr += 1
+						break
+
+					# no page flipped
+					if new_page_nr == page_nr:
+						flip_page(last_edge_pos)
+						continue
+
+					# multiple pages flipped at once
+					num_pages = (new_page_nr - page_nr) // 2
+					self._help_output(f"static/flip_back_{num_pages}.mp3")
+					self._manual_flip_confirm.clear()
+					self._page_flip_error = num_pages
+					self._manual_flip_confirm.wait()
+					self._page_flip_error = 0
+				else:
+					if page_nr is not None:
+						page_nr += 1
+
+					last_edge_pos = 1 if edge_pos is None else edge_pos
+					flip_page(last_edge_pos)
+					break
 
 			# TTS
 			audio, fmt = self._tts.synthesize(text)

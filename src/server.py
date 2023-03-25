@@ -32,7 +32,8 @@ def home() -> str:
 		listening=cont.listening,
 		playing=cont.playing,
 		paused=cont.paused,
-		volume=cont.volume)
+		volume=cont.volume,
+		page_flip_error=cont.page_flip_error)
 
 
 @server.get("/books")
@@ -150,6 +151,12 @@ def rewind() -> Tuple[str, int]:
 	return "", 204
 
 
+@server.post("/system/clearPageFlipError")
+def clear_page_flip_error() -> Tuple[str, int]:
+	cont.clear_page_flip_error()
+	return "", 204
+
+
 @server.get("/system/status")
 def status() -> Tuple[Dict, int]:
 	return {
@@ -158,7 +165,8 @@ def status() -> Tuple[Dict, int]:
 		"playing": cont.playing,
 		"paused": cont.paused or not cont.playing,
 		"volume": cont.volume * 100, "num_books": len(cont.books),
-		"current_book_pages": [b for b in cont.books if b["id"] == cont.scanning][0]["pages"] if cont.scanning is not None else -1
+		"current_book_pages": [b for b in cont.books if b["id"] == cont.scanning][0]["pages"] if cont.scanning is not None else -1,
+		"page_flip_error": cont.page_flip_error
 	}, 200
 
 

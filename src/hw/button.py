@@ -8,11 +8,11 @@ if CFG["web"]["host"] != "localhost":
 
 
 _BUTTONS = {
-	"rewind": (0, cont.rewind),
-	"play/pause": (1, cont.scan_play_pause),
-	"fast-forward": (2, cont.fast_forward),
-	"stop": (3, cont.stop_scan),
-	"help": (4, cont.help)
+	"rewind": (23, cont.rewind),
+	"play/pause": (24, cont.scan_play_pause),
+	"fast-forward": (25, cont.fast_forward),
+	"stop": (8, cont.stop_scan),
+	"help": (7, cont.help)
 }
 
 

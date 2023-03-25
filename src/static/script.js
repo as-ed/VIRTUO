@@ -1,6 +1,6 @@
 let status = {}
 
-function startStatusUpdates(scanning, listening, playing, paused, volume, num_books, current_book_pages) {
+function startStatusUpdates(scanning, listening, playing, paused, volume, num_books, current_book_pages, page_flip_error) {
 	status = {
 		scanning: scanning,
 		listening: listening,
@@ -8,7 +8,8 @@ function startStatusUpdates(scanning, listening, playing, paused, volume, num_bo
 		paused: paused,
 		volume: volume,
 		num_books: num_books,
-		current_book_pages: current_book_pages
+		current_book_pages: current_book_pages,
+		page_flip_error: page_flip_error
 	}
 
 	if (scanning != null) {
@@ -125,10 +126,22 @@ function setStatus(newStatus) {
 	if (newStatus.current_book_pages >= 0 && status.current_book_pages !== newStatus.current_book_pages)
 		document.getElementById("pages_" + newStatus.scanning).innerHTML = `<span class="mobile-bold">${newStatus.current_book_pages}</span><span class="mobile-only"> page${(newStatus.current_book_pages === 1) ? "" : "s"}, scanned at </span>`
 
+	if (newStatus.page_flip_error != null && status.page_flip_error !== newStatus.page_flip_error) {
+		const elem = document.getElementById("page-flip-error")
+
+		if (newStatus.page_flip_error === 0) {
+			elem.classList.add("hide-error")
+		} else {
+			elem.classList.remove("hide-error")
+			document.getElementById("page-error-num-pages").innerText = newStatus.page_flip_error
+		}
+	}
+
 	status.scanning = newStatus.scanning
 	status.listening = newStatus.listening
 	status.playing = newStatus.playing
 	status.paused = newStatus.paused
+	status.page_flip_error = newStatus.page_flip_error
 }
 
 function initCurrentAudio(playing, scanning) {
@@ -167,7 +180,7 @@ function scan(listen = false, book = null) {
 			}
 		})
 		.then((new_book) => {
-			updateStatus({scanning: new_book, listening: listen, playing: false, paused: false, volume: null, num_books: null, current_book_pages: -1})
+			updateStatus({scanning: new_book, listening: listen, playing: false, paused: false, volume: null, num_books: null, current_book_pages: -1, page_flip_error: null})
 		})
 		.catch((err) => {
 			console.log(err)
@@ -179,7 +192,7 @@ function stopScan() {
 	fetch("system/scan/stop", {method: "POST"})
 		.then((response) => {
 			if (response.ok) {
-				updateStatus({scanning: null, listening: false, playing: false, paused: false, volume: null, num_books: null, current_book_pages: -1})
+				updateStatus({scanning: null, listening: false, playing: false, paused: false, volume: null, num_books: null, current_book_pages: -1, page_flip_error: null})
 			} else {
 				alert("An error has occurred. Scan could not be stopped.")
 			}
@@ -233,4 +246,9 @@ function setTitle(book, elem) {
 
 function setAuthor(book, elem) {
 	fetch(`books/${book}/author?author=${elem.value}`, {method: "POST"})
+}
+
+function confirmManualFlip() {
+	document.getElementById("page-flip-error").classList.add("hide-error")
+	fetch("system/clearPageFlipError", {method: "POST"})
 }
