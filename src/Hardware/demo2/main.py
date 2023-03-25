@@ -11,7 +11,7 @@ mc = motors2.Motors()
 
 mm = MainMotor(MotorPin(mc, 0, 2),
                reset_sensor=Button(8),
-               encoder_pin=EncoderPin(mc, 5))
+               encoder_pin=EncoderPin(mc, 5, True))
 f = FanGroup(mc, [1,2,3], 1)
 s = Slider([MotorPin(mc, 1, 2), MotorPin(mc, 2, 2)])
 bc = BaseClipper(
@@ -20,8 +20,8 @@ bc = BaseClipper(
     -100,-50)
 
 ep = EncoderPin(mc, 5)
-tcl = TopClipper(MotorPin(mc, 0, 1), 100)
-tcr = TopClipper(MotorPin(mc, 5, 2), 100)
+tcr = TopClipper(MotorPin(mc, 0, 1), 100)
+tcl = TopClipper(MotorPin(mc, 5, 2), -100)
 
 def stop():
     mc.stop_motors(1)
@@ -31,39 +31,49 @@ def inter(i=True):
     if i:
         input()
 
-def turn_page(verbose=True, interrupt=True):
+def turn_page(down_var=0.5, verbose=True, interrupt=True):
     # TODO: Reset Position...
     if input("Is the system reset?(y/n)") != 'y':
         return
 
+    print(down_var)
+
     actions = [
-        lambda: mm.to_angle(15, verbose=verbose),
-        lambda: tcr.unclip(verbose=verbose),
-        lambda: f.on(),
-        lambda: s.down(0.6),
-        lambda: mm.to_angle(30, verbose=verbose),
-        lambda: time.sleep(1),
-        lambda: mm.to_angle(25, verbose=verbose),
-        lambda: tcr.clip(verbose=verbose),
-        lambda: bc.unclip(verbose=verbose),
-        lambda: mm.to_angle(20, verbose=verbose),
-        lambda: bc.clip(verbose=verbose),
-        lambda: f.off(),
-        lambda: s.up(1.0),
-        lambda: mm.to_angle(25, verbose=verbose),
-        lambda: tcr.unclip(verbose=verbose),
-        lambda: s.down(2.0),
-        lambda: mm.to_angle(10, verbose=verbose),
-        lambda: tcr.clip(verbose=verbose),
-        lambda: mm.to_angle(15, verbose=verbose),
-        lambda: s.up(2.5),
-        lambda: mm.to_angle(0, verbose=verbose)
+        (lambda: print("RESET " * 6), "Reset!"),
+        (lambda: bc.clip(verbose=verbose), "Making sure base is clipped"),
+        (lambda: tcl.clip(verbose=verbose), "Making sure left pages are clipped"),
+        (lambda: tcr.clip(verbose=verbose), "Making sure right pages are clipped"),
+        (lambda: mm.to_angle(5, verbose=verbose), "Moving arm to neutral angle"),
+        (lambda: s.down(down_var), "Moving slider down"),
+        (lambda: tcl.unclip(verbose=verbose), "Unclipping page to be turned"),
+        (lambda: f.on(), "Turning fan on"),
+        (lambda: mm.to_angle(1, verbose=verbose), "Moving to pick up page"),
+        (lambda: time.sleep(1), "Waiting for page to attach"),
+        (lambda: mm.to_angle(3, verbose=verbose), "Making space for re-clipping"),
+        (lambda: tcl.clip(verbose=verbose), "Re-clipping..."),
+        (lambda: bc.unclip(verbose=verbose), "Unclipping base"),
+        (lambda: mm.to_angle(6, verbose=verbose), "Moving past base clipper"),
+        (lambda: bc.clip(verbose=verbose), "Clipping base"),
+        (lambda: f.off(), "Fans off"),
+        (lambda: s.up(2), "Moving slider up"),
+        (lambda: mm.to_angle(4, verbose=verbose), "Moving over page"),
+        (lambda: s.down(1.0), "Moving slider to push page"),
+        (lambda: tcr.unclip(verbose=verbose), "Unclipping turned pages"),
+        (lambda: mm.to_angle(10), "Pushing pages into side"),
+        (lambda: tcr.clip(verbose=verbose), "Re-clipping turned pages"),
+        (lambda: tcl.unclip(verbose=verbose), "Unclipping unturned pages"),
+        (lambda: mm.to_angle(1, verbose=verbose), "Pushing unturned pages back"),
+        (lambda: tcl.clip(verbose=verbose), "Re-clipping unturned pages"),
+        (lambda: mm.to_angle(5, verbose=verbose), "Re-centering main arm"),
+        (lambda: s.up(2), "Moving arm to base position"),
+        (lambda: mm.to_angle(0, verbose=verbose), "Resetting arm"),
     ]
 
-    for a in actions:
+    for i, action in enumerate(actions):
+        func, text = action
         if verbose:
-            print("[INFO] Executing action " + str(actions.index(a)))
-        a()
+            print("[INFO] Executing action {index} \"{text}\"".format(index=i, text=text))
+        func()
         inter(interrupt)
 
 

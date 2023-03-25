@@ -35,16 +35,14 @@ class MainMotor:
         angle = self.ep.get_angle(verbose=verbose)
         if angle > target_angle:
             while angle > target_angle:
-                angle = self.ep.get_angle(verbose=verbose)
                 self.backward(0.2)
                 time.sleep(0.1)
+                angle = self.ep.get_angle(verbose=verbose)
         else:
             while angle < target_angle:
-                angle = self.ep.get_angle(verbose=verbose)
                 self.forward(0.2)
                 time.sleep(0.1)
-
-            angle = self.ep.get_angle(verbose=verbose)
+                angle = self.ep.get_angle(verbose=verbose)
 
         if verbose:
             print("[INFO] moved to angle " + str(angle))

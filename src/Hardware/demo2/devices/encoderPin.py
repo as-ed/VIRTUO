@@ -1,7 +1,8 @@
 class EncoderPin:
-    def __init__(self, mc, pin):
+    def __init__(self, mc, pin, inverted=False):
         self.mc = mc
         self.pin = pin
+        self.inverted = inverted
         self.angle = 0
 
     def get_change(self, verbose=False):
@@ -11,6 +12,9 @@ class EncoderPin:
 
         if delta > 128:
             delta -= 256
+
+        if self.inverted:
+            delta = -delta
 
         return delta
 
