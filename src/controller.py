@@ -290,7 +290,6 @@ class _Controller:
 		cameras = (Camera.left, Camera.right)
 		last_page = False
 		page_nr = None
-		last_edge_pos = 1
 		current_book_dict = [b for b in self._books if b["id"] == book][0]
 
 		while not last_page and not self._stop_event.is_set():
@@ -307,7 +306,7 @@ class _Controller:
 					last_page = True
 					break
 
-				text, self._metadata["last_sentence"], new_page_nr, edge_pos = ocr_result
+				text, self._metadata["last_sentence"], new_page_nr = ocr_result
 
 				# check if page flip was successful
 				if cam == Camera.left:
@@ -322,7 +321,7 @@ class _Controller:
 
 					# no page flipped
 					if new_page_nr == page_nr:
-						flip_page(last_edge_pos)
+						flip_page()
 						continue
 
 					# multiple pages flipped at once
@@ -335,9 +334,7 @@ class _Controller:
 				else:
 					if page_nr is not None:
 						page_nr += 1
-
-					last_edge_pos = 1 if edge_pos is None else edge_pos
-					flip_page(last_edge_pos)
+					flip_page()
 					break
 
 			# TTS
