@@ -11,7 +11,7 @@ from spellchecker import SpellChecker
 from config import CFG
 from ocr.camera import Camera
 from ocr.page_dewarp import dewarp
-
+from google.cloud import vision_v1
 
 _test_page = -1
 
@@ -39,7 +39,7 @@ def get_text(img: np.ndarray, book_loc: Optional[str], side: Camera, page_nr: in
 	#     _save_img(main_body, book_loc, page_nr)
 	# 	  return _post_processing(_ocr(main_body), prev_sentence)
 
-	dewarped = _pre_processing(img, side, book_log, page_nr)
+	dewarped = _pre_processing(img, side, book_loc, page_nr)
 	response = _google_ocr_request(dewarped)
 
 	if not response:
@@ -169,8 +169,8 @@ def _pre_processing(img: np.ndarray, side: Camera, book_loc: str, page_nr: int) 
 	else:
 		rotated = cv2.rotate(img, cv2.ROTATE_90_COUNTERCLOCKWISE)
 
-	_save_img(rotated, book_loc, f"{page_nr}_cropped")
-	return dewarp(cropped)
+	_save_img(rotated, book_loc, f"{page_nr}_rotated")
+	return dewarp(rotated)
 
 
 def _extract_bboxes(img: np.ndarray) -> List[Tuple[int]]:
