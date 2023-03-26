@@ -929,7 +929,7 @@ def dewarp(img, should_crop=True, original_img=None):
 
     if len(spans) < 5:
         print("Failed to dewarp. Only ", len(spans), "text spans")
-        if original_img:
+        if original_img != None:
             return cv2.cvtColor(original_img, cv2.COLOR_BGR2GRAY)
         return cv2.cvtColor(img, cv2.COLOR_BGR2GRAY)
 
