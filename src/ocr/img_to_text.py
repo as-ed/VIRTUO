@@ -3,64 +3,61 @@ import re
 from typing import Tuple, Optional, List, Union
 
 import cv2
+from google.oauth2 import service_account
+from google.cloud import vision_v1
 from nltk.tokenize import sent_tokenize
 import numpy as np
 import pytesseract
 from pytesseract import Output
 from spellchecker import SpellChecker
+
 from config import CFG
 from ocr.camera import Camera
 from ocr.page_dewarp import dewarp
-from google.cloud import vision_v1
+from util import test_connection
+
 
 _test_page = -1
+_ocr_client = vision_v1.ImageAnnotatorClient(credentials=service_account.Credentials.from_service_account_info(CFG["credentials"]["google_cloud"]))
 
 
-def get_text(img: np.ndarray, book_loc: Optional[str], side: Camera, page_nr: int = 0, prev_sentence: str = "", test_mode: bool = False) -> Optional[Tuple[str, str, Optional[int], Optional[float]]]:
+def get_text(img: np.ndarray, book_loc: Optional[str], side: Camera, page_nr: int = 0, prev_sentence: str = "", test_mode: bool = False) -> Optional[Tuple[str, str, Optional[int]]]:
 	"""
 	Converts image to text.
 	:param img: image as a numpy array of RGB values
 	:param book_loc: location where the digitized book is stored
 	:param page_nr: number of the current page
 	:param prev_sentence: last sentence of the previous page
-	:return: tuple of (page text except last sentence, last (potentially incomplete) sentence, page number, position of the right page edge (0.0 - 1.0, relative frame width)), `None` if the end of the book is reached.
+	:return: tuple of (page text except last sentence, last (potentially incomplete) sentence, page number), `None` if the end of the book is reached.
 	"""
 	global _test_page
 
 	if test_mode:
 		_test_page = (_test_page + 1) % len(_TEST_TEXT)
 		text, last_sentence = _post_processing(_TEST_TEXT[_test_page], prev_sentence)
-		return text, last_sentence, _test_page, 1 if _test_page + 1 != len(_TEST_TEXT) else None
+		return text, last_sentence, _test_page
 
 	_save_img(img, book_loc, f"{page_nr}_original")
-	# TODO: check for internet_connection
-	# if not internet_connection:
-	#     bboxes = _extract_bboxes(dewarped)
-	#     main_body = _extract_main_body(dewarped, bboxes)
-	#     _save_img(main_body, book_loc, page_nr)
-	# 	  return _post_processing(_ocr(main_body), prev_sentence)
 
 	dewarped = _pre_processing(img, side, book_loc, page_nr)
-	response = _google_ocr_request(dewarped)
 
-	if not response:
-		pass
+	if test_connection() and (response := _google_ocr_request(dewarped)) is not None:
+		blocks = _parse_google_ocr_response(response)
+		main_text = _get_google_ocr_page_main_body(blocks)
+		real_page_nr = _get_google_ocr_page_number(blocks)
+	else:
+		bboxes = _extract_bboxes(dewarped)
+		main_body = _extract_main_body(dewarped, bboxes, book_loc, page_nr)
+		_save_img(main_body, book_loc, page_nr)
+		main_text = _ocr(main_body)
+		real_page_nr = None
 
-	blocks = _parse_google_ocr_response(response)
-	main_text = _get_google_ocr_page_main_body(blocks)
+	text, last_sentence = _post_processing(main_text, prev_sentence)
 
-	return _post_processing(main_text, prev_sentence)
-
-
-def _google_ocr_client():
-	client = vision_v1.ImageAnnotatorClient()
-
-	return client
+	return text, last_sentence, real_page_nr
 
 
 def _google_ocr_request(img: np.ndarray):
-	client = _google_ocr_client()
-
 	success, encoded_image = cv2.imencode(".png", img)
 	content = encoded_image.tobytes()
 
@@ -69,14 +66,15 @@ def _google_ocr_request(img: np.ndarray):
 
 	image = vision_v1.Image(content=content)
 
-	response = client.document_text_detection(
-		image=image, image_context={"language_hints": ["en"]}
-	)
+	try:
+		response = _ocr_client.document_text_detection(image=image, image_context={"language_hints": ["en"]}, timeout=30)
 
-	if response.error.message:
+		if response.error.message:
+			return None
+
+		return response
+	except Exception:
 		return None
-
-	return response
 
 
 def _parse_google_ocr_response(response):

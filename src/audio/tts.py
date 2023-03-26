@@ -5,10 +5,9 @@ from typing import Optional, Generator, Tuple
 from google.oauth2 import service_account
 import google.cloud.texttospeech as gtts
 from nltk.tokenize import sent_tokenize
-import requests
-from requests import ConnectionError, Timeout
 
 from config import CFG
+from util import test_connection
 
 
 class TTS:
@@ -30,7 +29,7 @@ class TTS:
 		:return: Wave audio data and format (either "mp3" or "wav")
 		"""
 		fmt = "mp3"
-		if self._offline or not self._test_connection() or (audio := self._gtts(text)) is None:
+		if self._offline or not test_connection() or (audio := self._gtts(text)) is None:
 			audio = self._picotts(text)
 			fmt = "wav"
 
@@ -56,17 +55,10 @@ class TTS:
 	def _gtts(self, text: str) -> Optional[bytes]:
 		text_input = gtts.SynthesisInput(text=text)
 		try:
-			response = self._gtts_client.synthesize_speech(input=text_input, voice=self._gtts_voice_params, audio_config=self._gtts_audio_config, timeout=60)
+			response = self._gtts_client.synthesize_speech(input=text_input, voice=self._gtts_voice_params, audio_config=self._gtts_audio_config, timeout=30)
 			return response.audio_content
 		except Exception:
 			pass
-
-	def _test_connection(self) -> bool:
-		try:
-			requests.head("http://1.1.1.1", timeout=2)
-			return True
-		except (ConnectionError, Timeout):
-			return False
 
 	def _picotts(self, text: str) -> bytes:
 		with NamedTemporaryFile(suffix=".wav") as f:

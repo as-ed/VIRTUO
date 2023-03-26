@@ -20,6 +20,7 @@ pydub = "==0.25.1"
 mutagen = "==1.46.0"
 pypandoc = "==1.11"
 scipy = "==1.10.1"
+google-cloud-vision = "==3.4.0"
 
 [dev-packages]
 jupyter = "*"
