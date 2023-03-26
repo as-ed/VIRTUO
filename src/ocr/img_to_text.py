@@ -8,11 +8,10 @@ import numpy as np
 import pytesseract
 from pytesseract import Output
 from spellchecker import SpellChecker
-
 from config import CFG
 from ocr.camera import Camera
 from ocr.page_dewarp import dewarp
-
+from google.cloud import vision_v1
 
 _test_page = -1
 
@@ -33,78 +32,119 @@ def get_text(img: np.ndarray, book_loc: Optional[str], side: Camera, page_nr: in
 		return _post_processing(_TEST_TEXT[_test_page], prev_sentence)
 
 	_save_img(img, book_loc, f"{page_nr}_original")
+	# TODO: check for internet_connection
+	# if not internet_connection:
+	#     bboxes = _extract_bboxes(dewarped)
+	#     main_body = _extract_main_body(dewarped, bboxes)
+	#     _save_img(main_body, book_loc, page_nr)
+	# 	  return _post_processing(_ocr(main_body), prev_sentence)
 
 	dewarped = _pre_processing(img, side, book_loc, page_nr)
-	bboxes = _extract_bboxes(dewarped)
-	main_body = _extract_main_body(dewarped, bboxes, book_loc, page_nr)
-	_save_img(main_body, book_loc, page_nr)
+	response = _google_ocr_request(dewarped)
 
-	return _post_processing(_ocr(main_body), prev_sentence)
+	if not response:
+		pass
+
+	blocks = _parse_google_ocr_response(response)
+	main_text = _get_google_ocr_page_main_body(blocks)
+
+	return _post_processing(main_text, prev_sentence)
 
 
-def _crop(img: np.ndarray, side: Camera):
-	static_crop = img[CFG["camera"]["crop"][side.name]["top"]:-CFG["camera"]["crop"][side.name]["bottom"]]
+def _google_ocr_client():
+	client = vision_v1.ImageAnnotatorClient()
 
-	gray = cv2.cvtColor(static_crop, cv2.COLOR_BGR2GRAY)
+	return client
 
-	# Apply soft blurring to get rid of noise
-	blur = cv2.GaussianBlur(gray, (5, 3), 0)
 
-	# Erode slightly to enhance more of the text before binarisation
-	eroded = cv2.erode(blur, np.ones((2, 2), np.uint8), iterations=3)
-	_, binarised = cv2.threshold(eroded, 140, 255, cv2.THRESH_BINARY)
+def _google_ocr_request(img: np.ndarray):
+	client = _google_ocr_client()
 
-	# Aggresively erode horizontally
-	eroded = cv2.erode(binarised, cv2.getStructuringElement(cv2.MORPH_RECT, (5, 7)), iterations=3)
-	eroded = cv2.erode(eroded, cv2.getStructuringElement(cv2.MORPH_RECT, (5, 3)), iterations=1)
+	success, encoded_image = cv2.imencode(".png", img)
+	content = encoded_image.tobytes()
 
-	# Binarise again but with a higher threshold
-	_, binarised = cv2.threshold(eroded, 150, 255, cv2.THRESH_BINARY)
+	if not success:
+		return None
 
-	# Extract Contours
-	contours, hierarchy = cv2.findContours(eroded, cv2.RETR_LIST, cv2.CHAIN_APPROX_SIMPLE)
+	image = vision_v1.Image(content=content)
 
-	real_contours = []
-	for contour in contours:
-		x, y, w, h = cv2.boundingRect(contour)
+	response = client.document_text_detection(
+		image=image, image_context={"language_hints": ["en"]}
+	)
 
-		# Filter out irrelevant contours
-		if h / w > 8:
-			continue
+	if response.error.message:
+		return None
 
-		#if x < 0.05 * img.shape[1] or x + w > 0.95 * img.shape[1]:
-		#	continue
+	return response
 
-		#if y < 0.05 * img.shape[0] or y + h > 0.95 * img.shape[0]:
-		#	continue
 
-		if w * h < img.shape[0] * img.shape[1] * 0.01:
-			continue
+def _parse_google_ocr_response(response):
+	breaks = vision_v1.types.TextAnnotation.DetectedBreak.BreakType
+	blocks = []
 
-		real_contours.append((x, y, w, h))
+	for pages in response.full_text_annotation.pages:
+		for block in pages.blocks:
+			block_text = ""
+			for paragraph in block.paragraphs:
+				for word in paragraph.words:
+					for symbol in word.symbols:
+						word_text = symbol.text
+						if symbol.property.detected_break.type_:
+							break_text = ""
+							if (
+								symbol.property.detected_break.type_ == breaks.SPACE
+								or symbol.property.detected_break.type_ == breaks.LINE_BREAK
+								or symbol.property.detected_break.type_
+								== breaks.EOL_SURE_SPACE
+								or symbol.property.detected_break.type_
+								== breaks.EOL_SURE_SPACE
+							):
+								break_text = " "
+							elif symbol.property.detected_break.type_ == breaks.HYPHEN:
+								break_text = "-"
+							else:
+								break_text = ""
+							if symbol.property.detected_break.is_prefix:
+								word_text = break_text + word_text
+							else:
+								word_text = word_text + break_text
+						block_text += word_text
+			blocks.append(block_text)
 
-	# Fill the outlined contour in white and add it to the mask
-	mask = np.ones(img.shape, dtype="uint8")
-	for x, y, w, h in real_contours:
-		cv2.rectangle(mask, (x, y), (x + w, y + h), (255, 255, 255), -1)
+	return blocks
 
-	min_x1 = min(real_contours, key=lambda bbox: bbox[0])[0]
-	max_x2_bbox = max(real_contours, key=lambda bbox: bbox[0] + bbox[2])
-	max_x2 = max_x2_bbox[0] + max_x2_bbox[2]
-	min_y1 = min(real_contours, key=lambda bbox: bbox[1])[1]
-	max_y2_bbox = max(real_contours, key=lambda bbox: bbox[1] + bbox[3])
-	max_y2 = max_y2_bbox[1] + max_y2_bbox[3]
 
-	# Use mask to only keep the main body of the page
-	masked = cv2.bitwise_and(img, mask)
+def _get_google_ocr_page_number(blocks: List[str]) -> Optional[int]:
+	for text in blocks:
+		if re.match(r"^\d+$", text.strip()):
+			return int(text)
 
-	return masked[max(0, min_y1 - 20) : max_y2 + 20, max(0, min_x1 - 20) : max_x2 + 20]
+	return None
+
+
+def _get_google_ocr_page_title(blocks: List[str]) -> Optional[str]:
+	for text in blocks:
+		if len(text) < 20:
+			return text
+
+	return None
+
+
+def _get_google_ocr_page_main_body(blocks: List[str]) -> str:
+	output = ""
+
+	for text in blocks:
+		if len(text) >= 20:
+			output += text
+
+	return " ".join(blocks)
 
 
 def _extract_main_body(dewarped: np.ndarray, bboxes: List[Tuple[int]], book_loc: str, page_nr: int) -> np.ndarray:
 	mask = np.zeros(dewarped.shape, dtype=np.uint8)
 
-	print(bboxes)
+	if len(bboxes) == 0:
+		return dewarped
 
 	for x, y, w, h in bboxes:
 		if w * h > 25000:
@@ -128,9 +168,9 @@ def _pre_processing(img: np.ndarray, side: Camera, book_loc: str, page_nr: int) 
 		rotated = cv2.rotate(img, cv2.ROTATE_90_CLOCKWISE)
 	else:
 		rotated = cv2.rotate(img, cv2.ROTATE_90_COUNTERCLOCKWISE)
-	cropped = _crop(rotated, side)
-	_save_img(cropped, book_loc, f"{page_nr}_cropped")
-	return dewarp(cropped)
+
+	_save_img(rotated, book_loc, f"{page_nr}_rotated")
+	return dewarp(rotated)
 
 
 def _extract_bboxes(img: np.ndarray) -> List[Tuple[int]]:
@@ -149,11 +189,11 @@ def _extract_bboxes(img: np.ndarray) -> List[Tuple[int]]:
 		if area < 2000:
 			cv2.rectangle(mask, (left, bottom), (right, top), (255, 0, 255), 5)
 
-	mask = cv2.flip(mask, 0)
+	mask = cv2.flip(mask, flipCode=0)
 
 	dilated = cv2.dilate(mask, np.ones((3, 3), np.uint8), iterations=17)
 
-	contours, hierarchy = cv2.findContours(
+	contours, _ = cv2.findContours(
 		dilated, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE
 	)
 

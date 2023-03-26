@@ -9,20 +9,21 @@
 # License: MIT License (see LICENSE.txt)
 ######################################################################
 
+import random
 import datetime
 import cv2
 from PIL import Image
 import numpy as np
 import scipy.optimize
-import random
+import os
 
 # for some reason pylint complains about cv2 members being undefined :(
 # pylint: disable=E1101
 
-PAGE_MARGIN_X = 50  # reduced px to ignore near L/R edge
-PAGE_MARGIN_Y = 30  # reduced px to ignore near T/B edge
+PAGE_MARGIN_X = 0  # reduced px to ignore near L/R edge
+PAGE_MARGIN_Y = 0  # reduced px to ignore near T/B edge
 
-OUTPUT_ZOOM = 1.55  # how much to zoom output relative to *original* image
+OUTPUT_ZOOM = 1.5  # how much to zoom output relative to *original* image
 OUTPUT_DPI = 400  # just affects stated DPI of PNG, not appearance
 REMAP_DECIMATE = 16  # downscaling factor for remapping image
 
@@ -31,23 +32,94 @@ ADAPTIVE_WINSZ = 27  # window size for adaptive threshold in reduced px
 TEXT_MIN_WIDTH = 15  # min reduced px width of detected text contour
 TEXT_MIN_HEIGHT = 2  # min reduced px height of detected text contour
 TEXT_MIN_ASPECT = 1.5  # filter out text contours below this w/h ratio
-TEXT_MAX_THICKNESS = 15  # max reduced px thickness of detected text contour
+TEXT_MAX_THICKNESS = 10  # max reduced px thickness of detected text contour
 
 EDGE_MAX_OVERLAP = 1.0  # max reduced px horiz. overlap of contours in span
 EDGE_MAX_LENGTH = 100.0  # max reduced px length of edge connecting contours
-EDGE_ANGLE_COST = 25.0  # cost of angles in edges (tradeoff vs. length)
-EDGE_MAX_ANGLE = 7  # maximum change in angle allowed between contours
+EDGE_ANGLE_COST = 10.0  # cost of angles in edges (tradeoff vs. length)
+EDGE_MAX_ANGLE = 7.5  # maximum change in angle allowed between contours
 
 RVEC_IDX = slice(0, 3)  # index of rvec in params vector
 TVEC_IDX = slice(3, 6)  # index of tvec in params vector
 CUBIC_IDX = slice(6, 8)  # index of cubic slopes in params vector
 
-SPAN_MIN_WIDTH = 10  # minimum reduced px width for span
+SPAN_MIN_WIDTH = 50  # minimum reduced px width for span
 SPAN_PX_PER_STEP = 65  # reduced px spacing for sampling along spans
 FOCAL_LENGTH = 1.4  # normalized focal length of camera
 
+DEBUG_LEVEL = 0  # 0=none, 1=some, 2=lots, 3=all
+DEBUG_OUTPUT = "file"  # file, screen, both
+
+WINDOW_NAME = "Dewarp"  # Window name for visualization
+
+# nice color palette for visualizing contours, etc.
+CCOLORS = [
+    (255, 0, 0),
+    (255, 63, 0),
+    (255, 127, 0),
+    (255, 191, 0),
+    (255, 255, 0),
+    (191, 255, 0),
+    (127, 255, 0),
+    (63, 255, 0),
+    (0, 255, 0),
+    (0, 255, 63),
+    (0, 255, 127),
+    (0, 255, 191),
+    (0, 255, 255),
+    (0, 191, 255),
+    (0, 127, 255),
+    (0, 63, 255),
+    (0, 0, 255),
+    (63, 0, 255),
+    (127, 0, 255),
+    (191, 0, 255),
+    (255, 0, 255),
+    (255, 0, 191),
+    (255, 0, 127),
+    (255, 0, 63),
+]
+
 # default intrinsic parameter matrix
 K = np.array([[FOCAL_LENGTH, 0, 0], [0, FOCAL_LENGTH, 0], [0, 0, 1]], dtype=np.float32)
+
+
+def debug_show(name, step, text, display):
+    if DEBUG_OUTPUT != "screen":
+        filetext = text.replace(" ", "_")
+        outfile = name + "_debug_" + str(step) + "_" + filetext + ".png"
+        cv2.imwrite(outfile, display)
+
+    if DEBUG_OUTPUT != "file":
+        image = display.copy()
+        height = image.shape[0]
+
+        cv2.putText(
+            image,
+            text,
+            (16, height - 16),
+            cv2.FONT_HERSHEY_SIMPLEX,
+            1.0,
+            (0, 0, 0),
+            3,
+            cv2.LINE_AA,
+        )
+
+        cv2.putText(
+            image,
+            text,
+            (16, height - 16),
+            cv2.FONT_HERSHEY_SIMPLEX,
+            1.0,
+            (255, 255, 255),
+            1,
+            cv2.LINE_AA,
+        )
+
+        cv2.imshow(WINDOW_NAME, image)
+
+        while cv2.waitKey(5) < 0:
+            pass
 
 
 def round_nearest_multiple(i, factor):
@@ -79,6 +151,21 @@ def norm2pix(shape, pts, as_integer):
 
 def fltp(point):
     return tuple(point.astype(int).flatten())
+
+
+def draw_correspondences(img, dstpoints, projpts):
+    display = img.copy()
+    dstpoints = norm2pix(img.shape, dstpoints, True)
+    projpts = norm2pix(img.shape, projpts, True)
+
+    for pts, color in [(projpts, (255, 0, 0)), (dstpoints, (0, 0, 255))]:
+        for point in pts:
+            cv2.circle(display, fltp(point), 3, color, -1, cv2.LINE_AA)
+
+    for point_a, point_b in zip(projpts, dstpoints):
+        cv2.line(display, fltp(point_a), fltp(point_b), (255, 255, 255), 1, cv2.LINE_AA)
+
+    return display
 
 
 def get_default_params(corners, ycoords, xcoords):
@@ -174,20 +261,14 @@ def box(width, height):
 def get_page_extents(small):
     height, width = small.shape[:2]
 
-    xmin = PAGE_MARGIN_X
-    ymin = PAGE_MARGIN_Y
-    xmax = width - PAGE_MARGIN_X
-    ymax = height - PAGE_MARGIN_Y
-
     page = np.zeros((height, width), dtype=np.uint8)
-    cv2.rectangle(page, (xmin, ymin), (xmax, ymax), (255, 255, 255), -1)
 
-    outline = np.array([[xmin, ymin], [xmin, ymax], [xmax, ymax], [xmax, ymin]])
+    outline = np.array([[0, 0], [0, height], [width, height], [width, 0]])
 
     return page, outline
 
 
-def get_mask(small, pagemask, masktype):
+def get_mask(name, small, masktype):
     sgray = cv2.cvtColor(small, cv2.COLOR_RGB2GRAY)
 
     if masktype == "text":
@@ -197,11 +278,21 @@ def get_mask(small, pagemask, masktype):
             cv2.ADAPTIVE_THRESH_MEAN_C,
             cv2.THRESH_BINARY_INV,
             ADAPTIVE_WINSZ,
-            7,
+            21,
         )
 
-        mask = cv2.dilate(mask, box(9, 1))
+        if DEBUG_LEVEL >= 3:
+            debug_show(name, 0.1, "thresholded", mask)
+
+        mask = cv2.dilate(mask, box(7, 1))
+
+        if DEBUG_LEVEL >= 3:
+            debug_show(name, 0.2, "dilated", mask)
+
         mask = cv2.erode(mask, box(1, 3))
+
+        if DEBUG_LEVEL >= 3:
+            debug_show(name, 0.3, "eroded", mask)
 
     else:
         mask = cv2.adaptiveThreshold(
@@ -213,10 +304,20 @@ def get_mask(small, pagemask, masktype):
             7,
         )
 
+        if DEBUG_LEVEL >= 3:
+            debug_show(name, 0.4, "thresholded", mask)
+
         mask = cv2.erode(mask, box(3, 1), iterations=3)
+
+        if DEBUG_LEVEL >= 3:
+            debug_show(name, 0.5, "eroded", mask)
+
         mask = cv2.dilate(mask, box(8, 2))
 
-    return np.minimum(mask, pagemask)
+        if DEBUG_LEVEL >= 3:
+            debug_show(name, 0.6, "dilated", mask)
+
+    return mask
 
 
 def interval_measure_overlap(int_a, int_b):
@@ -293,6 +394,15 @@ class ContourInfo(object):
         xmax = self.proj_x(other.point1)
         return interval_measure_overlap(self.local_xrng, (xmin, xmax))
 
+    def __eq__(self, other):
+        return self
+
+    def __lt__(self, other):
+        return self
+
+    def __gt__(self, other):
+        return self
+
 
 def generate_candidate_edge(cinfo_a, cinfo_b):
     # we want a left of b (so a's successor will be b and b's
@@ -343,8 +453,8 @@ def make_tight_mask(contour, xmin, ymin, width, height):
     return tight_mask
 
 
-def get_contours(small, pagemask, masktype):
-    mask = get_mask(small, pagemask, masktype)
+def get_contours(name, small, pagemask, masktype):
+    mask = get_mask(name, small, masktype)
     # In some environments/versions, cv2.findContours apparently returns a 2-tuple instead of 3-tuple
     # https://github.com/facebookresearch/maskrcnn-benchmark/issues/339
     # We are always interested in the second-to-last member (first or second member) of the tuple
@@ -357,24 +467,32 @@ def get_contours(small, pagemask, masktype):
         rect = cv2.boundingRect(contour)
         xmin, ymin, width, height = rect
 
-        if (
-            width < TEXT_MIN_WIDTH
-            or height < TEXT_MIN_HEIGHT
-            or width < TEXT_MIN_ASPECT * height
-        ):
-            continue
+        # if (
+        #     width < TEXT_MIN_WIDTH
+        #     or height < TEXT_MIN_HEIGHT
+        #     or width < TEXT_MIN_ASPECT * height
+        # ):
+        #     continue
 
         tight_mask = make_tight_mask(contour, xmin, ymin, width, height)
-
         if tight_mask.sum(axis=0).max() > TEXT_MAX_THICKNESS:
             continue
 
-        contours_out.append(ContourInfo(contour, rect, tight_mask))
+        cinfo = ContourInfo(contour, rect, tight_mask)
+
+        # x1, y1 = fltp(cinfo.point0)
+        # x2, y2 = fltp(cinfo.point1)
+
+        # if abs(y2 - y1) < 15 and abs(x2 - x1) > 20:
+        contours_out.append(cinfo)
+
+    # if DEBUG_LEVEL >= 2:
+    # visualize_contours(name, small, [spine])
 
     return contours_out
 
 
-def assemble_spans(cinfo_list):
+def assemble_spans(small, cinfo_list, should_crop):
     # sort list
     cinfo_list = sorted(cinfo_list, key=lambda cinfo: cinfo.rect[1])
 
@@ -418,20 +536,41 @@ def assemble_spans(cinfo_list):
         # follow successors til end of span
         while cinfo:
             # remove from list (sadly making this loop *also* O(n^2)
-            cinfo_list.remove(cinfo)
-            # add to span
-            cur_span.append(cinfo)
-            width += cinfo.local_xrng[1] - cinfo.local_xrng[0]
-            # set successor
-            cinfo = cinfo.succ
-
+            try:
+                cinfo_list.remove(cinfo)
+                # add to span
+                cur_span.append(cinfo)
+                width += cinfo.local_xrng[1] - cinfo.local_xrng[0]
+                # set successor
+                cinfo = cinfo.succ
+            except:
+                break
         # add if long enough
         if width > SPAN_MIN_WIDTH:
             spans.append(cur_span)
 
-    random.shuffle(spans)
+    if should_crop:
+        (x1, y1, x2, y2) = crop(small, spans)
 
-    return spans[:22]
+        actual_spans = []
+
+        for span in spans:
+            cropped_span = []
+
+            for contour in span:
+                x, y, w, h = contour.rect
+                if x >= x1 and y >= y1 and x + w <= x2 and y + h <= y2:
+                    cropped_span.append(contour)
+
+            if len(cropped_span) > 0:
+                actual_spans.append(cropped_span)
+
+        random.shuffle(actual_spans)
+
+        return actual_spans[:25], (x1, y1, x2, y2)
+    else:
+        random.shuffle(spans)
+        return spans[:25], None
 
 
 def sample_spans(shape, spans):
@@ -463,7 +602,7 @@ def sample_spans(shape, spans):
     return span_points
 
 
-def keypoints_from_samples(pagemask, page_outline, span_points):
+def keypoints_from_samples(name, small, pagemask, page_outline, span_points):
     all_evecs = np.array([[0.0, 0.0]])
     all_weights = 0
 
@@ -514,7 +653,108 @@ def keypoints_from_samples(pagemask, page_outline, span_points):
         ycoords.append(py_coords.mean() - py0)
         xcoords.append(px_coords - px0)
 
+    visualize_span_points(name, small, span_points, corners)
+
     return corners, np.array(ycoords), xcoords
+
+
+def visualize_contours(name, small, cinfo_list):
+    regions = np.zeros_like(small)
+
+    for j, cinfo in enumerate(cinfo_list):
+        cv2.drawContours(regions, [cinfo.contour], 0, CCOLORS[j % len(CCOLORS)], -1)
+
+    mask = regions.max(axis=2) != 0
+
+    display = small.copy()
+    display[mask] = (display[mask] / 2) + (regions[mask] / 2)
+
+    for j, cinfo in enumerate(cinfo_list):
+        color = CCOLORS[j % len(CCOLORS)]
+        color = tuple([c / 4 for c in color])
+
+        cv2.circle(display, fltp(cinfo.center), 3, (255, 255, 255), 1, cv2.LINE_AA)
+        cv2.line(
+            display,
+            fltp(cinfo.point0),
+            fltp(cinfo.point1),
+            (255, 255, 255),
+            1,
+            cv2.LINE_AA,
+        )
+
+    debug_show(name, 1, "contours", display)
+
+
+def crop(small, spans):
+    regions = np.zeros_like(small)
+
+    for i, span in enumerate(spans):
+        contours = [cinfo.contour for cinfo in span]
+        cv2.fillPoly(regions, contours, (255, 255, 255))
+
+    regions = cv2.dilate(regions, np.ones((3, 1), np.uint8), iterations=25)
+
+    contours, _ = cv2.findContours(
+        cv2.cvtColor(regions, cv2.COLOR_BGR2GRAY),
+        cv2.RETR_EXTERNAL,
+        cv2.CHAIN_APPROX_NONE,
+    )
+
+    max_bbox = None
+    max_area = 0
+    for contour in contours:
+        x, y, w, h = cv2.boundingRect(contour)
+
+        if w * h > max_area:
+            max_area = w * h
+            max_bbox = (x, y, w, h)
+
+    if max_bbox:
+        cv2.rectangle(
+            small,
+            (max_bbox[0] - 10, max_bbox[1]),
+            (max_bbox[0] + max_bbox[2] + 10, max_bbox[1] + max_bbox[3]),
+            (255, 255, 255),
+            1,
+        )
+
+        x = max(0, max_bbox[0] - 10)
+        y = max(0, max_bbox[1] - 10)
+        w = max_bbox[2] + 10
+        h = max_bbox[3] + 10
+
+        return (x, y, x + w, y + h)
+
+    return (0, 0, small.shape[1], small.shape[0])
+
+
+def visualize_span_points(name, small, span_points, corners):
+    display = small.copy()
+
+    for i, points in enumerate(span_points):
+        points = norm2pix(small.shape, points, False)
+
+        mean, small_evec = cv2.PCACompute(
+            points.reshape((-1, 2)), None, maxComponents=1
+        )
+
+        dps = np.dot(points.reshape((-1, 2)), small_evec.reshape((2, 1)))
+        dpm = np.dot(mean.flatten(), small_evec.flatten())
+
+        point0 = mean + small_evec * (dps.min() - dpm)
+        point1 = mean + small_evec * (dps.max() - dpm)
+
+        for point in points:
+            cv2.circle(
+                display, fltp(point), 3, CCOLORS[i % len(CCOLORS)], -1, cv2.LINE_AA
+            )
+
+        cv2.line(display, fltp(point0), fltp(point1), (255, 255, 255), 1, cv2.LINE_AA)
+
+    cv2.polylines(
+        display, [norm2pix(small.shape, corners, True)], True, (255, 255, 255)
+    )
 
 
 def imgsize(img):
@@ -538,7 +778,7 @@ def make_keypoint_index(span_counts):
     return keypoint_index
 
 
-def optimize_params(dstpoints, span_counts, params):
+def optimize_params(name, small, dstpoints, span_counts, params):
     keypoint_index = make_keypoint_index(span_counts)
 
     def objective(pvec):
@@ -547,6 +787,11 @@ def optimize_params(dstpoints, span_counts, params):
 
     print("  initial objective is", objective(params))
 
+    if DEBUG_LEVEL >= 1:
+        projpts = project_keypoints(params, keypoint_index)
+        display = draw_correspondences(small, dstpoints, projpts)
+        debug_show(name, 4, "keypoints before", display)
+
     print("  optimizing", len(params), "parameters...")
     start = datetime.datetime.now()
     res = scipy.optimize.minimize(objective, params, method="SLSQP")
@@ -554,6 +799,11 @@ def optimize_params(dstpoints, span_counts, params):
     print("  optimization took", round((end - start).total_seconds(), 2), "sec.")
     print("  final objective is", res.fun)
     params = res.x
+
+    if DEBUG_LEVEL >= 1:
+        projpts = project_keypoints(params, keypoint_index)
+        display = draw_correspondences(small, dstpoints, projpts)
+        debug_show(name, 5, "keypoints after", display)
 
     return params
 
@@ -575,11 +825,12 @@ def get_page_dims(corners, rough_dims, params):
     return dims
 
 
-def remap_image(img, page_dims, params):
+def remap_image(name, img, small, page_dims, params):
     height = 0.5 * page_dims[1] * OUTPUT_ZOOM * img.shape[0]
     height = round_nearest_multiple(height, REMAP_DECIMATE)
-
     width = round_nearest_multiple(height * page_dims[0] / page_dims[1], REMAP_DECIMATE)
+
+    print("  output will be {}x{}".format(width, height))
 
     height_small = height / REMAP_DECIMATE
     width_small = width / REMAP_DECIMATE
@@ -630,17 +881,35 @@ def remap_image(img, page_dims, params):
     thresh = cv2.adaptiveThreshold(
         remapped,
         255,
-        cv2.ADAPTIVE_THRESH_MEAN_C,
+        cv2.ADAPTIVE_THRESH_GAUSSIAN_C,
         cv2.THRESH_BINARY_INV,
         ADAPTIVE_WINSZ,
-        15,
+        21,
     )
+
+    pil_image = Image.fromarray(thresh)
+    pil_image = pil_image.convert("1")
+
+    # threshfile = name + "_thresh.png"
+    # pil_image.save(threshfile, dpi=(OUTPUT_DPI, OUTPUT_DPI))
+
+    # if DEBUG_LEVEL >= 1:
+    #     height = small.shape[0]
+    #     width = int(round(height * float(thresh.shape[1]) / thresh.shape[0]))
+    #     display = cv2.resize(thresh, (width, height), interpolation=cv2.INTER_AREA)
+    #     debug_show(name, 6, "output", display)
 
     return thresh
 
 
-def dewarp(img):
+def dewarp(img, should_crop=True, original_img=None):
+    if DEBUG_LEVEL > 0 and DEBUG_OUTPUT != "file":
+        cv2.namedWindow(WINDOW_NAME)
+
+    outfiles = []
+
     small = resize_to_screen(img)
+    name = ""
 
     print(
         "loaded",
@@ -650,13 +919,31 @@ def dewarp(img):
         imgsize(small),
     )
 
+    if DEBUG_LEVEL >= 3:
+        debug_show(name, 0.0, "original", small)
+
     pagemask, page_outline = get_page_extents(small)
 
-    cinfo_list = get_contours(small, pagemask, "text")
-    spans = assemble_spans(cinfo_list)
+    cinfo_list = get_contours(name, small, pagemask, "text")
+    spans, cropped_coords = assemble_spans(small, cinfo_list, should_crop)
 
-    if len(spans) < 3:
-        return img
+    if len(spans) < 5:
+        print("Failed to dewarp. Only ", len(spans), "text spans")
+        if original_img is not None:
+            return cv2.cvtColor(original_img, cv2.COLOR_BGR2GRAY)
+        return cv2.cvtColor(img, cv2.COLOR_BGR2GRAY)
+
+    if should_crop:
+        x1, y1, x2, y2 = cropped_coords
+
+        rx1 = int((img.shape[1] / small.shape[1]) * x1)
+        ry1 = int((img.shape[0] / small.shape[0]) * y1)
+        rx2 = int((img.shape[1] / small.shape[1]) * x2)
+        ry2 = int((img.shape[0] / small.shape[0]) * y2)
+
+        cropped = img[ry1:ry2, rx1:rx2]
+
+        return dewarp(cropped, should_crop=False, original_img=img)
 
     span_points = sample_spans(small.shape, spans)
 
@@ -670,15 +957,15 @@ def dewarp(img):
     )
 
     corners, ycoords, xcoords = keypoints_from_samples(
-        pagemask, page_outline, span_points
+        name, small, pagemask, page_outline, span_points
     )
 
     rough_dims, span_counts, params = get_default_params(corners, ycoords, xcoords)
 
     dstpoints = np.vstack((corners[0].reshape((1, 1, 2)),) + tuple(span_points))
 
-    params = optimize_params(dstpoints, span_counts, params)
+    params = optimize_params(name, small, dstpoints, span_counts, params)
 
     page_dims = get_page_dims(corners, rough_dims, params)
 
-    return remap_image(img, page_dims, params)
+    return remap_image(name, img, small, page_dims, params)
