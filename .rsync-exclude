@@ -11,3 +11,5 @@ run
 settings.yml
 default_settings.yml
 loc.py
+virtuo.service
+config.yml

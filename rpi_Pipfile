@@ -1,0 +1,31 @@
+[[source]]
+url = "https://pypi.org/simple"
+verify_ssl = true
+name = "pypi"
+
+[packages]
+numpy = "==1.23.5"
+python-mpv = "==0.5.2"
+opencv-python = "==4.7.0.68"
+pyyaml = "==6.0"
+pytesseract = "==0.3.10"
+Pillow = "==9.4.0"
+google-auth = "2.14.1"
+google-cloud-texttospeech = "==2.12.1"
+pyspellchecker = "==0.7.1"
+nltk = "==3.8.1"
+flask = "==2.2.3"
+ffmpeg-python = "==0.2.0"
+pydub = "==0.25.1"
+mutagen = "==1.46.0"
+pypandoc = "==1.11"
+scipy = "==1.10.1"
+google-cloud-vision = "==3.4.0"
+"RPi.GPIO" = "==0.7.1"
+smbus = "==1.1.post2"
+smbus2 = "==0.3.0"
+
+[dev-packages]
+
+[requires]
+python_version = "3.9"

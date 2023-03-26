@@ -1,0 +1,4 @@
+#!/bin/bash
+
+cd /home/pi/virtuo || exit
+sudo /home/pi/.local/share/virtualenvs/virtuo-9K6FFc1g/bin/python src/virtuo.py
