@@ -39,6 +39,9 @@ def get_text(img: np.ndarray, book_loc: Optional[str], side: Camera, page_nr: in
 
 	_save_img(img, book_loc, f"{page_nr}_original")
 
+	if _is_last_page(img, side):
+		return None
+
 	dewarped = _pre_processing(img, side, book_loc, page_nr)
 
 	if test_connection() and (response := _google_ocr_request(dewarped)) is not None:
@@ -139,6 +142,15 @@ def _get_google_ocr_page_main_body(blocks: List[str]) -> str:
 	return " ".join(blocks)
 
 
+def _is_last_page(img: np.ndarray, side: Camera) -> bool:
+	rotated = _rotate(img, side)
+
+	qr_detector = cv2.QRCodeDetector()
+	data, _, _ = qr_detector.detectAndDecode(rotated)
+
+	return len(data) > 0 and data == "http://virtuo.local"
+
+
 def _extract_main_body(dewarped: np.ndarray, bboxes: List[Tuple[int]], book_loc: str, page_nr: int) -> np.ndarray:
 	mask = np.zeros(dewarped.shape, dtype=np.uint8)
 
@@ -161,14 +173,20 @@ def _extract_main_body(dewarped: np.ndarray, bboxes: List[Tuple[int]], book_loc:
 	return (mask & dewarped)[max(0, min_y1 - 20) : max_y2 + 20, max(0, min_x1 - 20) : max_x2 + 20]
 
 
-def _pre_processing(img: np.ndarray, side: Camera, book_loc: str, page_nr: int) -> np.ndarray:
+def _rotate(img: np.ndarray, side: Camera):
 	# Rotate image by 90 degrees as camera returns a landscape orientation
 	if side == Camera.left:
 		rotated = cv2.rotate(img, cv2.ROTATE_90_CLOCKWISE)
 	else:
 		rotated = cv2.rotate(img, cv2.ROTATE_90_COUNTERCLOCKWISE)
 
+	return rotated
+
+
+def _pre_processing(img: np.ndarray, side: Camera, book_loc: str, page_nr: int) -> np.ndarray:
+	rotated = _rotate(img, side)
 	_save_img(rotated, book_loc, f"{page_nr}_rotated")
+
 	return dewarp(rotated)
 
 
