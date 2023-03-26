@@ -24,6 +24,35 @@ h1 {
 	margin: auto;
 }
 
+#open-wifi-settings {
+	position: absolute;
+	right: 15px;
+	top: 15px;
+	color: #E8EEF2;
+}
+
+#open-wifi-settings:hover {
+	color: #FF6812;
+	cursor: pointer;
+}
+
+#wifi-settings {
+	width: 300px;
+	height: 155px;
+	margin-left: -165px;
+	margin-top: -93px;
+}
+
+#wifi-settings > input {
+	margin-top: 15px;
+}
+
+.settings-heading {
+	color: #FF6812;
+	margin: 0;
+	font-size: 20px;
+}
+
 .subtitle {
 	color: #FF6812;
 	margin: 10px 0 0 0;
@@ -67,7 +96,7 @@ thead {
 	font-weight: bold;
 }
 
-.metadata {
+.text-field {
 	background: none;
 	border-top: none;
 	border-left: none;
@@ -219,21 +248,24 @@ input[type="range"]:hover::-webkit-slider-thumb {
 	display: none;
 }
 
-#page-flip-error {
+.dialog {
 	position: fixed;
 	top: 50%;
 	left: 50%;
-	width: 700px;
-	height: 140px;
 	padding: 15px;
-	margin-left: -375px;
-	margin-top: -70px;
 	background: rgba(232, 238, 242, 0.95);
 	border-radius: 25px;
 	border: solid #FF6812;
 }
 
-.hide-error {
+#page-flip-error {
+	width: 700px;
+	height: 140px;
+	margin-left: -390px;
+	margin-top: -85px;
+}
+
+.hide-dialog {
 	display: none;
 }
 

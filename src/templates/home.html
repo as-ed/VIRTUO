@@ -12,6 +12,7 @@
 		<div class="header">
 			<h1>VIRTUO</h1>
 			<h4 class="subtitle">Visual Impairment Reading Technology Utilizing Outspoken language</h4>
+			<a id="open-wifi-settings" title="WiFi settings" aria-label="WiFi settings" onclick="openWifiSettings()"><i class="fa-solid fa-wifi"></i> <i class="fa-solid fa-gear"></i></a>
 		</div>
 
 		<h2 class="heading">System Controls</h2>
@@ -67,8 +68,8 @@
 			<tbody id="books">
 			{% for book in books %}
 				<tr id="{{book["id"]}}" class="book">
-					<td class="md-row sm-row"><input type="text" class="metadata" id="title_{{book["id"]}}" value="{{book["title"]}}" placeholder="Enter title" oninput="setTitle('{{book["id"]}}', this)" aria-label="title"></td>
-					<td class="md-row sm-row"><input type="text" class="metadata" id="author_{{book["id"]}}" value="{{book["author"]}}" placeholder="Enter author" oninput="setAuthor('{{book["id"]}}', this)" aria-label="author"></td>
+					<td class="md-row sm-row"><input type="text" class="text-field" id="title_{{book["id"]}}" value="{{book["title"]}}" placeholder="Enter title" oninput="setTitle('{{book["id"]}}', this)" aria-label="title"></td>
+					<td class="md-row sm-row"><input type="text" class="text-field" id="author_{{book["id"]}}" value="{{book["author"]}}" placeholder="Enter author" oninput="setAuthor('{{book["id"]}}', this)" aria-label="author"></td>
 					<td id="pages_{{book["id"]}}" class="md-row sm-row"><span class="mobile-bold" aria-label="number of pages">{{book["pages"]}}</span><span class="mobile-only"> page{% if book["pages"] != 1 %}s{% endif %}, scanned at </span></td>
 					<td class="md-row sm-row"><span class="mobile-bold" aria-label="scanned at time">{{book["time"]}}</span></td>
 					<td class="md-row"><span class="mobile-only">Downloads: </span><a href="books/{{book["id"]}}/book.txt" target="_blank" download aria-label="download text file">Text</a></td>
@@ -91,7 +92,18 @@
 		<h2 class="heading">Scanned books will appear here</h2>
 		{% endif %}
 		<br><br>
-		<div id="page-flip-error" {% if page_flip_error == 0 %}class="hide-error"{% endif %}>
+
+		<div id="wifi-settings" class="dialog hide-dialog">
+			<h4 class="settings-heading">Add WiFi Network</h4>
+
+			<input type="text" id="ssid" class="text-field" placeholder="Enter SSID" aria-label="WiFi SSID">
+			<input type="password" id="password" class="text-field" placeholder="Enter password" aria-label="WiFi password">
+			<br><br>
+			<a class="bold" aria-label="add WiFi network" onclick="addWifiNetwork()">Add network</a>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;
+			<a class="bold" aria-label="cancel" onclick="closeWifiSettings()">Cancel</a>
+		</div>
+
+		<div id="page-flip-error" class="dialog {% if page_flip_error == 0 %}hide-dialog{% endif %}">
 			An error has occurred, the page turner has flipped multiple pages at once. Please flip back <span id="page-error-num-pages">{{page_flip_error}}</span> pages and then press the physical play button or confirm here to resume. (Remember that the top of the book is facing towards you, so you need to flip the pages from the right to the left)
 			<br><br>
 			<a class="bold" aria-label="confirm that pages were flipped back" onclick="confirmManualFlip()">I have flipped back the page{% if page_flip_error != 1 %}s{% endif %}</a>

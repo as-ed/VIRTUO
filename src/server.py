@@ -157,6 +157,12 @@ def clear_page_flip_error() -> Tuple[str, int]:
 	return "", 204
 
 
+@server.post("/system/addWifi")
+def add_wifi() -> Tuple[str, int]:
+	cont.add_wifi(request.form["ssid"], request.form["password"])
+	return "", 204
+
+
 @server.get("/system/status")
 def status() -> Tuple[Dict, int]:
 	return {

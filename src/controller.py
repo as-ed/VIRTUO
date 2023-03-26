@@ -186,6 +186,10 @@ class _Controller:
 		with self.metadata_lock, open(os.path.join(CFG["book_location"], book, _Controller.METADATA_FILE)) as f:
 			return metadata["last_page"] if "last_page" in (metadata := json.load(f)) else -1
 
+	def add_wifi(self, ssid: str, password: str) -> None:
+		with open("/etc/wpa_supplicant/wpa_supplicant.conf", "a") as f:
+			f.write(_WPA_NETWORK.format(ssid, password))
+
 	@property
 	def books(self) -> List[Dict]:
 		return self._books
@@ -370,3 +374,11 @@ controller = _Controller()
 
 
 _HELP_TEXT = "I am Virtuo, your accessible book scanning robot. I can scan your books and read them out to you. To have a book read to you just place it on top of the book tray and slide it forwards until it hits the stop. When placing the book on the tray, rotate it so that the top side faces towards you and the front cover is on the right side when opened. Open it up, slide the clipper mechanism over the book cover to secure it and flip down the clippers. Then open it up to the page where you want to start listening and press the play button. You can control the playback using the rewind and fast-forward buttons and the play button for pausing and resuming. To adjust the volume you can use the dial on the right hand side and to stop the scan or reset the robot to scan another book just press the reset button. You can access and manage a list of all your scanned books and access more advanced options like changing the voice or continuing previous scans, using the web interface. To access it, just connect any device with a web browser to the same WiFi network as the robot and visit http://virtuo.local, that is Victor, India, Romeo, Tango, Uniform, Oscar, dot, Lima, Oscar, Charlie, Alpha, Lima."
+
+_WPA_NETWORK = """
+network={{
+	ssid="{}"
+	psk="{}"
+	scan_ssid=1
+}}
+"""

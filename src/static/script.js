@@ -252,3 +252,26 @@ function confirmManualFlip() {
 	document.getElementById("page-flip-error").classList.add("hide-error")
 	fetch("system/clearPageFlipError", {method: "POST"})
 }
+
+function openWifiSettings() {
+	const elem = document.getElementById("wifi-settings")
+
+	if (elem.classList.contains("hide-dialog"))
+		elem.classList.remove("hide-dialog")
+	else
+		elem.classList.add("hide-dialog")
+}
+
+function closeWifiSettings() {
+	document.getElementById("wifi-settings").classList.add("hide-dialog")
+	document.getElementById("ssid").value = document.getElementById("password").value = ""
+}
+
+function addWifiNetwork() {
+	const data = new FormData()
+	data.append("ssid", document.getElementById("ssid").value)
+	data.append("password", document.getElementById("password").value)
+	fetch(`system/addWifi`, {method: "POST", body: data})
+
+	closeWifiSettings()
+}
