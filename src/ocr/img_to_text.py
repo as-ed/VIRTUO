@@ -39,6 +39,9 @@ def get_text(img: np.ndarray, book_loc: Optional[str], side: Camera, page_nr: in
 
 	_save_img(img, book_loc, f"{page_nr}_original")
 
+	if _is_last_page(img):
+		return None
+
 	dewarped = _pre_processing(img, side, book_loc, page_nr)
 
 	if test_connection() and (response := _google_ocr_request(dewarped)) is not None:
@@ -137,6 +140,13 @@ def _get_google_ocr_page_main_body(blocks: List[str]) -> str:
 			output += text
 
 	return " ".join(blocks)
+
+
+def _is_last_page(img: np.ndarray) -> bool:
+	qr_detector = cv2.QRCodeDetector()
+	data, _, _ = qr_detector.detectAndDecode(img)
+
+	return len(data) > 0 and data == "http://virtuo.local"
 
 
 def _extract_main_body(dewarped: np.ndarray, bboxes: List[Tuple[int]], book_loc: str, page_nr: int) -> np.ndarray:
