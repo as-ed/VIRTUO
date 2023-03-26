@@ -19,7 +19,7 @@ class BaseClipper:
         self.extender.move(-self.extender_forward, self.extend_time)
 
     def fall(self):
-        self.rotator.move(self.rotator_forward)
+        self.rotator.move(self.rotator_forward * 3)
 
     def rise(self):
         self.rotator.move(-self.rotator_forward)
@@ -30,8 +30,10 @@ class BaseClipper:
     def unclip(self, float=True, verbose=False):
         if verbose:
             print("[INFO] Base Clipper unclipping...")
-        self.rise()
+
         self.retract()
+        self.rise()
+
         if float:
             time.sleep(0.2)
             self.float()

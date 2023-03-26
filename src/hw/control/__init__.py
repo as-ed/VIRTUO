@@ -21,7 +21,7 @@ s = Slider([MotorPin(mc, 1, 2), MotorPin(mc, 2, 2)])
 bc = BaseClipper(
     MotorPin(mc, 5, 1),
     MotorPin(mc, 3, 2),
-    -60, 30)
+    -20, 30)
 
 ep = EncoderPin(mc, 5)
 tcr = TopClipper(MotorPin(mc, 0, 1), 100)
