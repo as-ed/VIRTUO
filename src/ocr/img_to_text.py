@@ -44,7 +44,11 @@ def get_text(img: np.ndarray, book_loc: Optional[str], side: Camera, page_nr: in
 
 	dewarped = _pre_processing(img, side, book_loc, page_nr)
 
+	if dewarped is None:
+		return ""
+
 	if test_connection() and (response := _google_ocr_request(dewarped)) is not None:
+		print("Using Google OCR")
 		blocks = _parse_google_ocr_response(response)
 		main_text = _get_google_ocr_page_main_body(blocks)
 		real_page_nr = _get_google_ocr_page_number(blocks)
@@ -58,6 +62,42 @@ def get_text(img: np.ndarray, book_loc: Optional[str], side: Camera, page_nr: in
 	text, last_sentence = _post_processing(main_text, prev_sentence)
 
 	return text, last_sentence, real_page_nr
+
+
+def _get_left_page_boundary(img: np.ndarray) -> Optional[int]:
+	grayscaled = cv2.cvtColor(img, cv2.COLOR_RGB2GRAY)
+
+	mask = cv2.adaptiveThreshold(
+		grayscaled,
+		255,
+		cv2.ADAPTIVE_THRESH_MEAN_C,
+		cv2.THRESH_BINARY_INV,
+		27,
+		21,
+	)
+
+	mask = cv2.dilate(mask, np.ones((7, 1), np.uint8), iterations=1)
+	# mask = cv2.dilate(mask, np.ones((1, 3), np.uint8), iterations=5)
+
+	cv2.imwrite("original.png", img)
+	cv2.imwrite("mask.png", mask)
+
+	img_area = mask.shape[1] * mask.shape[0]
+	contours = cv2.findContours(mask, cv2.RETR_LIST, cv2.CHAIN_APPROX_NONE)[-2]
+	contour_boxes = [ cv2.boundingRect(contour) for contour in contours ]
+	# Filter by area
+	contour_boxes = list(
+		filter(
+			lambda cbox: cbox[2] * cbox[3] < img_area * 0.85 and cbox[2] * cbox[3] > img_area * 0.05, contour_boxes
+		)
+	)
+	# Filter by starting x position
+	contour_boxes = list(filter(lambda cbox: cbox[0] > 10, contour_boxes))
+	contour_boxes.sort(key=lambda box: box[0])
+
+	if len(contour_boxes) > 0:
+		return contour_boxes[0][0]/img.shape[1]
+	return None
 
 
 def _google_ocr_request(img: np.ndarray):
@@ -126,7 +166,7 @@ def _get_google_ocr_page_number(blocks: List[str]) -> Optional[int]:
 
 def _get_google_ocr_page_title(blocks: List[str]) -> Optional[str]:
 	for text in blocks:
-		if len(text) < 20:
+		if len(text) < 25:
 			return text
 
 	return None
@@ -136,10 +176,10 @@ def _get_google_ocr_page_main_body(blocks: List[str]) -> str:
 	output = ""
 
 	for text in blocks:
-		if len(text) >= 20:
+		if len(text) >= 25:
 			output += text
 
-	return " ".join(blocks)
+	return output
 
 
 def _is_last_page(img: np.ndarray, side: Camera) -> bool:
@@ -187,7 +227,13 @@ def _pre_processing(img: np.ndarray, side: Camera, book_loc: str, page_nr: int) 
 	rotated = _rotate(img, side)
 	_save_img(rotated, book_loc, f"{page_nr}_rotated")
 
-	return dewarp(rotated)
+	dewarped = dewarp(rotated, side, page_nr)
+
+	if dewarped is not None:
+		_save_img(dewarped, book_loc, f"{page_nr}_dewarped")
+		return dewarped
+
+	return None
 
 
 def _extract_bboxes(img: np.ndarray) -> List[Tuple[int]]:
