@@ -10,14 +10,14 @@ camera:
     right: 40
   crop:
     left:
-      top: 370
-      right: 75
-      bottom: 250
-      left: 0
-    right:
-      top: 400
+      top: 350
       right: 0
-      bottom: 200
+      bottom: 305
+      left: 130
+    right:
+      top: 300
+      right: 130
+      bottom: 355
       left: 0
 audio:
   voices:
