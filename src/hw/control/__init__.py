@@ -21,11 +21,11 @@ s = Slider([MotorPin(mc, 1, 2), MotorPin(mc, 2, 2)])
 bc = BaseClipper(
     MotorPin(mc, 5, 1),
     MotorPin(mc, 3, 2),
-    -20, 30)
+    -15, 30)
 
 ep = EncoderPin(mc, 5)
 tcr = TopClipper(MotorPin(mc, 0, 1), 100)
-tcl = TopClipper(MotorPin(mc, 5, 2), -100)
+tcl = TopClipper(MotorPin(mc, 4, 2), -100)
 
 
 def stop():
@@ -56,7 +56,7 @@ def turn_page(down_var=1.0, verbose=True, interrupt=False):
         (lambda: f.on(), "Turning fan on"),
         (lambda: mm.to_angle(1, verbose=verbose), "Moving to pick up page"),
         (lambda: time.sleep(1), "Waiting for page to attach"),
-        (lambda: mm.to_angle(3, verbose=verbose), "Making space for re-clipping"),
+        (lambda: mm.to_angle(2, verbose=verbose), "Making space for re-clipping"),
         (lambda: tcl.clip(verbose=verbose), "Re-clipping..."),
         (lambda: mm.to_angle(1, verbose=verbose), "Moving arm out of the way of base clipper"),
         (lambda: bc.unclip(verbose=verbose), "Unclipping base"),
@@ -67,7 +67,7 @@ def turn_page(down_var=1.0, verbose=True, interrupt=False):
         (lambda: mm.to_angle(4, verbose=verbose), "Moving over page"),
         (lambda: s.down(1.0), "Moving slider to push page"),
         (lambda: tcr.unclip(verbose=verbose), "Unclipping turned pages"),
-        (lambda: mm.to_angle(10), "Pushing pages into side"),
+        (lambda: mm.to_angle(9), "Pushing pages into side"),
         (lambda: tcr.clip(verbose=verbose), "Re-clipping turned pages"),
         (lambda: tcl.unclip(verbose=verbose), "Unclipping unturned pages"),
         (lambda: mm.to_angle(0, verbose=verbose), "Pushing unturned pages back"),
