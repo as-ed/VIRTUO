@@ -79,12 +79,16 @@ class AudioPlayer:
 
 		return not self._player.pause
 
+	def resume(self) -> None:
+		if self._player.pause:
+			self._player.cycle("pause")
+
 	def pause(self) -> None:
 		if not self._player.pause:
 			self._player.cycle("pause")
 
 	def stop(self) -> None:
-		self._player.stop(keep_playlist="yes")
+		self._player.stop()#keep_playlist="yes")
 
 	def quit(self) -> None:
 		self._player.stop()

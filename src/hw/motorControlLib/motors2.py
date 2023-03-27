@@ -1,5 +1,5 @@
-from iotools import MotorControl
-from iotools2 import MotorControl2
+from hw.motorControlLib.iotools import MotorControl
+from hw.motorControlLib.iotools2 import MotorControl2
 import smbus
 from time import sleep
 from datetime import datetime

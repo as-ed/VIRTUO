@@ -103,8 +103,8 @@ def reset(verbose=False):
     if verbose:
         print("[INFO] Floating base clipper")
     bc.float()
-    tcr.clip()
-    tcl.clip()
+    #tcr.clip()
+    #tcl.clip()
     mm.reset(verbose=verbose)
 
     mc.stop_motors(1)
@@ -132,3 +132,7 @@ def calibrate_slider(time_unit=0.08, slider_width=8, total_height=16, verbose=Fa
             if verbose:
                 print("[INFO] Height found as {movements} movements lasting {time_unit}".format(movements=i, time_unit=time_unit))
             return i
+
+
+# move to loading position when application starts
+load_book(verbose=False)

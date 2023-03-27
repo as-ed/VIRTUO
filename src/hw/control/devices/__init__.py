@@ -1,9 +1,9 @@
-from control.devices.fan import Fan
-from control.devices.mainMotor import MainMotor
-from control.devices.fanGroup import FanGroup
-from control.devices.motorPin import MotorPin
-from control.devices.slider import Slider
-from control.devices.baseClipper import BaseClipper
-from control.devices.encoderPin import EncoderPin
-from control.devices.topClipper import TopClipper
+from hw.control.devices.fan import Fan
+from hw.control.devices.mainMotor import MainMotor
+from hw.control.devices.fanGroup import FanGroup
+from hw.control.devices.motorPin import MotorPin
+from hw.control.devices.slider import Slider
+from hw.control.devices.baseClipper import BaseClipper
+from hw.control.devices.encoderPin import EncoderPin
+from hw.control.devices.topClipper import TopClipper
 

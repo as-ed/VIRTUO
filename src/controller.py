@@ -6,12 +6,12 @@ from queue import SimpleQueue
 import re
 from threading import Thread, Event, Lock
 from time import sleep
-from typing import List, Optional, Any, Dict, Union
+from typing import List, Optional, Any, Dict
 
 from audio.audio_player import AudioPlayer
 from audio.tts import TTS
 from config import CFG, settings
-from hw.flipper import flip_page
+from hw.flipper import flip_page, load_position, rest_position
 from ocr.camera import Camera, take_photo, init_camera
 from ocr.img_to_text import get_text
 
@@ -108,12 +108,13 @@ class _Controller:
 					self._listening = listen
 					self._help_player.stop()
 					self._player.seek(listened_up_to)
+					self._player.resume()
 				elif self.playing:
 					self._listening = listen
 					with self.metadata_lock, open(os.path.join(CFG["book_location"], self._scanning, _Controller.METADATA_FILE), "w") as f:
 						self._metadata["listened_up_to"] = self._player.total_pos
 						json.dump(self._metadata, f)
-					self._player.stop()
+					self._player.pause()#stop()
 
 				return self._scanning
 
@@ -132,11 +133,14 @@ class _Controller:
 		return False
 
 	def scan_play_pause(self) -> None:
+		print(1)
+
 		if self._page_flip_error != 0:
 			self.clear_page_flip_error()
 			return
 
 		if self._scanning is None or not self._listening:
+			print(2)
 			self.scan(True)
 		else:
 			self.toggle_pause()
@@ -292,6 +296,8 @@ class _Controller:
 		page_nr = None
 		current_book_dict = [b for b in self._books if b["id"] == book][0]
 
+		rest_position()
+
 		while not last_page and not self._stop_event.is_set():
 			# OCR
 			cam = cameras[self._metadata["pages"] % 2]
@@ -349,6 +355,8 @@ class _Controller:
 			self._metadata["pages"] = current_book_dict["pages"] = self._metadata["pages"] + 1
 			with self.metadata_lock, open(os.path.join(book_path, _Controller.METADATA_FILE), "w") as f:
 				json.dump(self._metadata, f)
+
+		load_position()
 
 		# wait until stop or playback is done
 		while not self._stop_event.is_set() and self._listening and not self._player.eop_reached:
