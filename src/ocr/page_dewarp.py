@@ -16,6 +16,9 @@ from PIL import Image
 import numpy as np
 import scipy.optimize
 import os
+from config import CFG
+
+from ocr.camera import Camera
 
 # for some reason pylint complains about cv2 members being undefined :(
 # pylint: disable=E1101
@@ -29,21 +32,21 @@ REMAP_DECIMATE = 16  # downscaling factor for remapping image
 
 ADAPTIVE_WINSZ = 27  # window size for adaptive threshold in reduced px
 
-TEXT_MIN_WIDTH = 15  # min reduced px width of detected text contour
+TEXT_MIN_WIDTH = 10  # min reduced px width of detected text contour
 TEXT_MIN_HEIGHT = 2  # min reduced px height of detected text contour
 TEXT_MIN_ASPECT = 1.5  # filter out text contours below this w/h ratio
 TEXT_MAX_THICKNESS = 10  # max reduced px thickness of detected text contour
 
-EDGE_MAX_OVERLAP = 1.0  # max reduced px horiz. overlap of contours in span
-EDGE_MAX_LENGTH = 100.0  # max reduced px length of edge connecting contours
-EDGE_ANGLE_COST = 10.0  # cost of angles in edges (tradeoff vs. length)
+EDGE_MAX_OVERLAP = 2  # max reduced px horiz. overlap of contours in span
+EDGE_MAX_LENGTH = 35.0  # max reduced px length of edge connecting contours
+EDGE_ANGLE_COST = 15.0  # cost of angles in edges (tradeoff vs. length)
 EDGE_MAX_ANGLE = 7.5  # maximum change in angle allowed between contours
 
 RVEC_IDX = slice(0, 3)  # index of rvec in params vector
 TVEC_IDX = slice(3, 6)  # index of tvec in params vector
 CUBIC_IDX = slice(6, 8)  # index of cubic slopes in params vector
 
-SPAN_MIN_WIDTH = 50  # minimum reduced px width for span
+SPAN_MIN_WIDTH = 25  # minimum reduced px width for span
 SPAN_PX_PER_STEP = 65  # reduced px spacing for sampling along spans
 FOCAL_LENGTH = 1.4  # normalized focal length of camera
 
@@ -268,7 +271,7 @@ def get_page_extents(small):
     return page, outline
 
 
-def get_mask(name, small, masktype):
+def get_mask(page_nr, small, masktype, should_crop):
     sgray = cv2.cvtColor(small, cv2.COLOR_RGB2GRAY)
 
     if masktype == "text":
@@ -281,18 +284,14 @@ def get_mask(name, small, masktype):
             21,
         )
 
-        if DEBUG_LEVEL >= 3:
-            debug_show(name, 0.1, "thresholded", mask)
-
         mask = cv2.dilate(mask, box(7, 1))
-
-        if DEBUG_LEVEL >= 3:
-            debug_show(name, 0.2, "dilated", mask)
 
         mask = cv2.erode(mask, box(1, 3))
 
-        if DEBUG_LEVEL >= 3:
-            debug_show(name, 0.3, "eroded", mask)
+        if should_crop:
+            save_img(mask, CFG["debug_location"], "mask_before", page_nr)
+        else:
+            save_img(mask, CFG["debug_location"], "mask_after", page_nr)
 
     else:
         mask = cv2.adaptiveThreshold(
@@ -304,18 +303,9 @@ def get_mask(name, small, masktype):
             7,
         )
 
-        if DEBUG_LEVEL >= 3:
-            debug_show(name, 0.4, "thresholded", mask)
-
         mask = cv2.erode(mask, box(3, 1), iterations=3)
 
-        if DEBUG_LEVEL >= 3:
-            debug_show(name, 0.5, "eroded", mask)
-
         mask = cv2.dilate(mask, box(8, 2))
-
-        if DEBUG_LEVEL >= 3:
-            debug_show(name, 0.6, "dilated", mask)
 
     return mask
 
@@ -453,8 +443,8 @@ def make_tight_mask(contour, xmin, ymin, width, height):
     return tight_mask
 
 
-def get_contours(name, small, pagemask, masktype):
-    mask = get_mask(name, small, masktype)
+def get_contours(small, masktype, page_pos, page_nr, should_crop):
+    mask = get_mask(page_nr, small, masktype, should_crop)
     # In some environments/versions, cv2.findContours apparently returns a 2-tuple instead of 3-tuple
     # https://github.com/facebookresearch/maskrcnn-benchmark/issues/339
     # We are always interested in the second-to-last member (first or second member) of the tuple
@@ -480,19 +470,25 @@ def get_contours(name, small, pagemask, masktype):
 
         cinfo = ContourInfo(contour, rect, tight_mask)
 
-        # x1, y1 = fltp(cinfo.point0)
-        # x2, y2 = fltp(cinfo.point1)
+        x1, y1 = fltp(cinfo.point0)
+        x2, y2 = fltp(cinfo.point1)
 
-        # if abs(y2 - y1) < 15 and abs(x2 - x1) > 20:
-        contours_out.append(cinfo)
+        if should_crop:
+            if page_pos == Camera.left:
+                if x2 > (small.shape[1]):
+                    continue
+            elif x1 < 15:
+                continue
 
-    # if DEBUG_LEVEL >= 2:
-    # visualize_contours(name, small, [spine])
+        if abs(x2 - x1) > 15:
+            contours_out.append(cinfo)
+
+    visualize_contours(small, contours_out, page_nr, should_crop)
 
     return contours_out
 
 
-def assemble_spans(small, cinfo_list, should_crop):
+def assemble_spans(small, cinfo_list, should_crop, page_nr):
     # sort list
     cinfo_list = sorted(cinfo_list, key=lambda cinfo: cinfo.rect[1])
 
@@ -550,7 +546,7 @@ def assemble_spans(small, cinfo_list, should_crop):
             spans.append(cur_span)
 
     if should_crop:
-        (x1, y1, x2, y2) = crop(small, spans)
+        (x1, y1, x2, y2) = crop(small, spans, page_nr)
 
         actual_spans = []
 
@@ -567,10 +563,10 @@ def assemble_spans(small, cinfo_list, should_crop):
 
         random.shuffle(actual_spans)
 
-        return actual_spans[:25], (x1, y1, x2, y2)
+        return actual_spans[:22], (x1, y1, x2, y2)
     else:
         random.shuffle(spans)
-        return spans[:25], None
+        return spans[:22], None
 
 
 def sample_spans(shape, spans):
@@ -602,7 +598,7 @@ def sample_spans(shape, spans):
     return span_points
 
 
-def keypoints_from_samples(name, small, pagemask, page_outline, span_points):
+def keypoints_from_samples(page_nr, small, pagemask, page_outline, span_points):
     all_evecs = np.array([[0.0, 0.0]])
     all_weights = 0
 
@@ -653,12 +649,12 @@ def keypoints_from_samples(name, small, pagemask, page_outline, span_points):
         ycoords.append(py_coords.mean() - py0)
         xcoords.append(px_coords - px0)
 
-    visualize_span_points(name, small, span_points, corners)
+    visualize_span_points(page_nr, small, span_points, corners)
 
     return corners, np.array(ycoords), xcoords
 
 
-def visualize_contours(name, small, cinfo_list):
+def visualize_contours(small, cinfo_list, page_nr, should_crop):
     regions = np.zeros_like(small)
 
     for j, cinfo in enumerate(cinfo_list):
@@ -683,17 +679,30 @@ def visualize_contours(name, small, cinfo_list):
             cv2.LINE_AA,
         )
 
-    debug_show(name, 1, "contours", display)
+    if should_crop:
+        save_img(display, CFG["debug_location"], "contours_before", page_nr)
+    else:
+        save_img(display, CFG["debug_location"], "contours_after", page_nr)
 
 
-def crop(small, spans):
+def save_img(img, location, subdir, page_nr):
+    path = os.path.join(location, subdir)
+    os.makedirs(path, exist_ok=True)
+    cv2.imwrite(os.path.join(path, f"{page_nr}.png"), img)
+
+
+def crop(small, spans, page_nr):
     regions = np.zeros_like(small)
 
     for i, span in enumerate(spans):
         contours = [cinfo.contour for cinfo in span]
         cv2.fillPoly(regions, contours, (255, 255, 255))
 
+    save_img(regions, CFG["debug_location"], "regions_before", page_nr)
+
     regions = cv2.dilate(regions, np.ones((3, 1), np.uint8), iterations=25)
+
+    save_img(regions, CFG["debug_location"], "regions_after", page_nr)
 
     contours, _ = cv2.findContours(
         cv2.cvtColor(regions, cv2.COLOR_BGR2GRAY),
@@ -711,25 +720,17 @@ def crop(small, spans):
             max_bbox = (x, y, w, h)
 
     if max_bbox:
-        cv2.rectangle(
-            small,
-            (max_bbox[0] - 10, max_bbox[1]),
-            (max_bbox[0] + max_bbox[2] + 10, max_bbox[1] + max_bbox[3]),
-            (255, 255, 255),
-            1,
-        )
-
-        x = max(0, max_bbox[0] - 10)
-        y = max(0, max_bbox[1] - 10)
-        w = max_bbox[2] + 10
-        h = max_bbox[3] + 10
+        x = max(0, max_bbox[0] - 20)
+        y = max(0, max_bbox[1] - 20)
+        w = max_bbox[2] + 20
+        h = max_bbox[3] + 20
 
         return (x, y, x + w, y + h)
 
     return (0, 0, small.shape[1], small.shape[0])
 
 
-def visualize_span_points(name, small, span_points, corners):
+def visualize_span_points(page_nr, small, span_points, corners):
     display = small.copy()
 
     for i, points in enumerate(span_points):
@@ -755,6 +756,8 @@ def visualize_span_points(name, small, span_points, corners):
     cv2.polylines(
         display, [norm2pix(small.shape, corners, True)], True, (255, 255, 255)
     )
+
+    save_img(display, CFG["debug_location"], "spans", page_nr)
 
 
 def imgsize(img):
@@ -881,28 +884,19 @@ def remap_image(name, img, small, page_dims, params):
     thresh = cv2.adaptiveThreshold(
         remapped,
         255,
-        cv2.ADAPTIVE_THRESH_GAUSSIAN_C,
+        cv2.ADAPTIVE_THRESH_MEAN_C,
         cv2.THRESH_BINARY_INV,
-        ADAPTIVE_WINSZ,
-        21,
+        35,
+        9,
     )
 
     pil_image = Image.fromarray(thresh)
     pil_image = pil_image.convert("1")
 
-    # threshfile = name + "_thresh.png"
-    # pil_image.save(threshfile, dpi=(OUTPUT_DPI, OUTPUT_DPI))
-
-    # if DEBUG_LEVEL >= 1:
-    #     height = small.shape[0]
-    #     width = int(round(height * float(thresh.shape[1]) / thresh.shape[0]))
-    #     display = cv2.resize(thresh, (width, height), interpolation=cv2.INTER_AREA)
-    #     debug_show(name, 6, "output", display)
-
     return thresh
 
 
-def dewarp(img, should_crop=True, original_img=None):
+def dewarp(img, page_pos: Camera, page_nr: int, should_crop=True, original_img=None):
     if DEBUG_LEVEL > 0 and DEBUG_OUTPUT != "file":
         cv2.namedWindow(WINDOW_NAME)
 
@@ -924,14 +918,12 @@ def dewarp(img, should_crop=True, original_img=None):
 
     pagemask, page_outline = get_page_extents(small)
 
-    cinfo_list = get_contours(name, small, pagemask, "text")
-    spans, cropped_coords = assemble_spans(small, cinfo_list, should_crop)
+    cinfo_list = get_contours(small, "text", page_pos, page_nr, should_crop)
+    spans, cropped_coords = assemble_spans(small, cinfo_list, should_crop, page_nr)
 
-    if len(spans) < 5:
+    if len(spans) < 4:
         print("Failed to dewarp. Only ", len(spans), "text spans")
-        if original_img is not None:
-            return cv2.cvtColor(original_img, cv2.COLOR_BGR2GRAY)
-        return cv2.cvtColor(img, cv2.COLOR_BGR2GRAY)
+        return None
 
     if should_crop:
         x1, y1, x2, y2 = cropped_coords
@@ -943,7 +935,7 @@ def dewarp(img, should_crop=True, original_img=None):
 
         cropped = img[ry1:ry2, rx1:rx2]
 
-        return dewarp(cropped, should_crop=False, original_img=img)
+        return dewarp(cropped, page_pos, page_nr, should_crop=False, original_img=img)
 
     span_points = sample_spans(small.shape, spans)
 
@@ -957,7 +949,7 @@ def dewarp(img, should_crop=True, original_img=None):
     )
 
     corners, ycoords, xcoords = keypoints_from_samples(
-        name, small, pagemask, page_outline, span_points
+        page_nr, small, pagemask, page_outline, span_points
     )
 
     rough_dims, span_counts, params = get_default_params(corners, ycoords, xcoords)
