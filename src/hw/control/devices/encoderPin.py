@@ -11,8 +11,7 @@ class EncoderPin:
         if verbose:
             print("[INFO] delta " + str(delta))
 
-        if delta > 128:
-            delta -= 256
+
 
         if self.inverted:
             delta = -delta
