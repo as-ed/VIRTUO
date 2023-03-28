@@ -43,7 +43,7 @@ def run_actions(actions, verbose=True, interrupt=False):
             input()
 
 
-def turn_page(down_var=1.0, verbose=True, interrupt=False):
+def turn_page(down_var=0.55, verbose=True, interrupt=False):
     actions = [
         (lambda: time.sleep(0), "Turning page with down var {down_var}".format(down_var=down_var)),
         (lambda: mm.reset(verbose=verbose), "Making sure are is reset"),
@@ -54,9 +54,10 @@ def turn_page(down_var=1.0, verbose=True, interrupt=False):
         (lambda: s.down(down_var), "Moving slider down"),
         (lambda: tcl.unclip(verbose=verbose), "Unclipping page to be turned"),
         (lambda: f.on(), "Turning fan on"),
+        (lambda: time.sleep(3), "Waiting for page to attach"),
         (lambda: mm.to_angle(1, verbose=verbose), "Moving to pick up page"),
-        (lambda: time.sleep(1), "Waiting for page to attach"),
-        (lambda: mm.to_angle(3, verbose=verbose), "Making space for re-clipping"),
+        (lambda: time.sleep(3), "Waiting for page to attach"),
+        (lambda: mm.to_angle(2, verbose=verbose), "Making space for re-clipping"),
         (lambda: tcl.clip(verbose=verbose), "Re-clipping..."),
         (lambda: mm.to_angle(1, verbose=verbose), "Moving arm out of the way of base clipper"),
         (lambda: bc.unclip(verbose=verbose), "Unclipping base"),
