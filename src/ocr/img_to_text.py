@@ -8,7 +8,7 @@ from google.cloud import vision_v1
 from nltk.tokenize import sent_tokenize
 import numpy as np
 import pytesseract
-from pytesseract import Output
+from pytesseract import Output, TesseractError
 from spellchecker import SpellChecker
 
 from config import CFG
@@ -68,8 +68,17 @@ def get_text(img: np.ndarray, book_loc: Optional[str], side: Camera, page_nr: in
 
 
 def upside_down() -> bool:
-	if (osd := pytesseract.image_to_osd(_rotate_crop(take_photo(Camera.right), Camera.right), output_type=Output.DICT))["orientation_conf"] < 5:
-		osd = pytesseract.image_to_osd(_rotate_crop(take_photo(Camera.left), Camera.left), output_type=Output.DICT)
+	osd = None
+	try:
+		osd = pytesseract.image_to_osd(_rotate_crop(take_photo(Camera.right), Camera.right), output_type=Output.DICT)
+	except TesseractError:
+		pass
+
+	if osd is None or osd["orientation_conf"] < 5:
+		try:
+			osd = pytesseract.image_to_osd(_rotate_crop(take_photo(Camera.left), Camera.left), output_type=Output.DICT)
+		except TesseractError:
+			return False
 
 	return osd["orientation_conf"] >= 5 and osd["orientation"] == 180
 

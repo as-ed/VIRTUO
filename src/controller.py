@@ -69,6 +69,9 @@ class _Controller:
 
 		with self._scan_start_stop_lock:
 			if self._scanning is None:
+				if listen:
+					self._help_output("first_page.mp3")
+
 				# check book rotation
 				rest_position()
 
@@ -151,14 +154,17 @@ class _Controller:
 	def scan_play_pause(self) -> None:
 		print("scan_play_pause")
 
-		if self._page_flip_error != 0:
-			self.clear_page_flip_error()
-			return
+		def f() -> None:
+			if self._page_flip_error != 0:
+				self.clear_page_flip_error()
+				return
 
-		if self._scanning is None or not self._listening:
-			self.scan(True)
-		else:
-			self.toggle_pause()
+			if self._scanning is None or not self._listening:
+				self.scan(True)
+			else:
+				self.toggle_pause()
+
+		Thread(target=f).start()
 
 	def toggle_pause(self) -> bool:
 		print("toggle_pause")
@@ -330,12 +336,10 @@ class _Controller:
 		page_nr = None
 		current_book_dict = [b for b in self._books if b["id"] == book][0]
 
-		if self.listening and not self.playing:
-			self._help_output("first_page.mp3")
-
 		while not last_page and not self._stop_event.is_set():
 			# OCR
 			cam = cameras[self._metadata["pages"] % 2]
+			flip = False
 
 			for i in range(2):
 				ocr_result = get_text(None if self.test_mode else take_photo(cam), book_path, cam, self._metadata["pages"], self._metadata["last_sentence"], self.test_mode)
@@ -375,7 +379,7 @@ class _Controller:
 				else:
 					if page_nr is not None:
 						page_nr += 1
-					flip_page()
+					flip = True
 					break
 
 			if text != "":
@@ -387,12 +391,15 @@ class _Controller:
 				with open(os.path.join(book_path, _Controller.TEXT_FILE), "a") as f:
 					f.write(text)
 
+				if flip:
+					flip_page()
+
 			# update metadata
 			self._metadata["pages"] = current_book_dict["pages"] = self._metadata["pages"] + 1
 			with self.metadata_lock, open(os.path.join(book_path, _Controller.METADATA_FILE), "w") as f:
 				json.dump(self._metadata, f)
 
-		load_position()
+		load_position(bc_up=False)
 
 		# wait until stop or playback is done
 		while not self._stop_event.is_set() and self._listening and not self._player.eop_reached:

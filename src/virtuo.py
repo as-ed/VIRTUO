@@ -1,11 +1,19 @@
 from argparse import ArgumentParser
+from signal import signal, SIGINT
+import sys
 
 from config import CFG
 from controller import controller as cont
 from hw.button import setup_buttons
-from hw.flipper import load_position, rest_position
+from hw.flipper import load_position, rest_position, stop_motors, turn_on_lights
 from ocr.camera import init_camera
 from server import server
+
+
+def _sigint_handler(*_) -> None:
+	rest_position()
+	stop_motors()
+	sys.exit(0)
 
 
 if __name__ == "__main__":
@@ -23,6 +31,8 @@ if __name__ == "__main__":
 		"--test",
 		action="store_true",
 		help="Enable testing mode. Uses hardcoded text instead of scanning pages.")
+
+	signal(SIGINT, _sigint_handler)
 
 	args = parser.parse_args()
 

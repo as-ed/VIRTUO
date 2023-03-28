@@ -16,21 +16,29 @@ mc = motors2.Motors()
 mm = MainMotor(MotorPin(mc, 0, 2),
                reset_sensor=Button(10),
                encoder_pin=EncoderPin(mc, 5, True))
-f = FanGroup(mc, [1, 2, 3], 1)
+f = FanGroup(mc, [1, 2, 3], 1, [60, 60, 60])
 s = Slider([MotorPin(mc, 1, 2), MotorPin(mc, 2, 2)])
 bc = BaseClipper(
     MotorPin(mc, 5, 1),
     MotorPin(mc, 3, 2),
-    -15, 30)
+    -10, 30)
 
 ep = EncoderPin(mc, 5)
-tcr = TopClipper(MotorPin(mc, 0, 1), 100)
+tcr = TopClipper(MotorPin(mc, 5, 2), 100)
 tcl = TopClipper(MotorPin(mc, 4, 2), -100)
 
 
 def stop():
     mc.stop_motors(1)
     mc.stop_motors(2)
+
+
+def led_strip_on():
+    mc.move_motor(4, 65)
+
+
+def led_strip_off():
+    mc.move_motor(4, 0)
 
 
 def run_actions(actions, verbose=True, interrupt=False):
@@ -43,7 +51,7 @@ def run_actions(actions, verbose=True, interrupt=False):
             input()
 
 
-def turn_page(down_var=0.55, verbose=True, interrupt=False):
+def turn_page(down_var=0.6, verbose=True, interrupt=False):
     actions = [
         (lambda: time.sleep(0), "Turning page with down var {down_var}".format(down_var=down_var)),
         (lambda: mm.reset(verbose=verbose), "Making sure are is reset"),
@@ -54,7 +62,7 @@ def turn_page(down_var=0.55, verbose=True, interrupt=False):
         (lambda: s.down(down_var), "Moving slider down"),
         (lambda: tcl.unclip(verbose=verbose), "Unclipping page to be turned"),
         (lambda: f.on(), "Turning fan on"),
-        (lambda: time.sleep(3), "Waiting for page to attach"),
+        (lambda: time.sleep(5), "Waiting for page to attach"),
         (lambda: mm.to_angle(1, verbose=verbose), "Moving to pick up page"),
         (lambda: time.sleep(3), "Waiting for page to attach"),
         (lambda: mm.to_angle(2, verbose=verbose), "Making space for re-clipping"),
@@ -82,14 +90,14 @@ def turn_page(down_var=0.55, verbose=True, interrupt=False):
     run_actions(actions, verbose=verbose, interrupt=interrupt)
 
 
-def load_book(verbose=True, interrupt=False):
+def load_book(verbose=True, interrupt=False, bc_up=True):
    actions = [
        (lambda: mm.reset(verbose=verbose), "Resetting main motor"),
        (lambda: mm.to_angle(5, verbose=verbose), "Moving are to middle"),
        (lambda: s.up(2), "Making sure fans are out the way"),
        (lambda: tcl.unclip(verbose=verbose), "Unclipping left side"),
        (lambda: tcr.unclip(verbose=verbose), "Unclipping right side"),
-       (lambda: bc.unclip(verbose=verbose), "Unclipping base"),
+       (lambda: bc.unclip(verbose=verbose) if bc_up else bc.float(), "Unclipping base"),
    ]
 
    run_actions(actions, verbose=verbose, interrupt=interrupt)
@@ -106,7 +114,7 @@ def reset(verbose=False):
         print("[INFO] Floating base clipper")
     bc.float()
     #tcr.clip()
-    #tcl.clip()
+    tcl.clip()
     mm.reset(verbose=verbose)
 
     mc.stop_motors(1)

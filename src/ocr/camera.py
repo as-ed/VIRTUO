@@ -8,6 +8,7 @@ from enum import Enum
 import numpy as np
 
 from config import CFG
+from hw.flipper import turn_on_lights, turn_off_lights
 
 if CFG["web"]["host"] == "localhost":
 	from typing import Union, Tuple, Optional
@@ -38,6 +39,8 @@ def take_photo(camera: Camera) -> np.ndarray:
 
 
 def _capture(camera: Camera, calibration_delay: float) -> cv2.VideoCapture:
+	turn_on_lights()
+
 	cam = cv2.VideoCapture(camera.value)
 
 	# set camera properties
@@ -71,6 +74,9 @@ def _capture(camera: Camera, calibration_delay: float) -> cv2.VideoCapture:
 
 	_, img = cam.read()
 	cam.release()
+
+	turn_off_lights()
+
 	return img
 
 
