@@ -134,5 +134,5 @@ def calibrate_slider(time_unit=0.08, slider_width=8, total_height=16, verbose=Fa
             return i
 
 
-# move to loading position when application starts
-load_book(verbose=False)
+
+
