@@ -81,6 +81,22 @@ def turn_page(down_var=0.55, verbose=True, interrupt=False):
 
     run_actions(actions, verbose=verbose, interrupt=interrupt)
 
+def flatten_page(verbose=True, interrupt=False):
+    actions = [ 
+            (lambda: mm.to_angle(5), "Moving to middle"),
+            (lambda: s.down(1.0), "Moving slider to push page"),
+            (lambda: tcr.unclip(verbose=verbose), "Unclipping turned pages"),
+            (lambda: mm.to_angle(9), "Pushing pages into side"),
+            (lambda: tcr.clip(verbose=verbose), "Re-clipping turned pages"),
+            (lambda: tcl.unclip(verbose=verbose), "Unclipping unturned pages"),
+            (lambda: mm.to_angle(0, verbose=verbose), "Pushing unturned pages back"),
+            (lambda: tcl.clip(verbose=verbose), "Re-clipping unturned pages"),
+            (lambda: mm.to_angle(5, verbose=verbose), "Re-centering main arm"),
+            (lambda: s.up(2), "Moving arm to base position"),
+            (lambda: mm.reset(verbose=verbose), "Resetting arm"),
+        ]
+
+    run_actions(actions, verbose=verbose, interrupt=interrupt)
 
 def load_book(verbose=True, interrupt=False):
    actions = [
