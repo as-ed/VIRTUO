@@ -6,8 +6,8 @@ camera:
   photo_delay: 2
   init_time: 5
   focus:
-    left: 45
-    right: 40
+    left: 60
+    right: 50
   crop:
     left:
       top: 350
