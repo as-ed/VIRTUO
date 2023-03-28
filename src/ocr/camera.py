@@ -2,6 +2,7 @@ from __future__ import annotations
 
 from queue import SimpleQueue
 from threading import Event, Thread
+from time import sleep
 
 import cv2
 from enum import Enum
@@ -22,7 +23,7 @@ class Camera(Enum):
 	right = CFG["camera"]["right"]
 
 
-def init_camera() -> None:
+def init_camera() -> bool:
 	return_queue = SimpleQueue()
 	capture_thread_input.put((Camera.left, CFG["camera"]["init_time"], return_queue))
 	ret = return_queue.get()

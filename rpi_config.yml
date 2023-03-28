@@ -1,24 +1,24 @@
 camera:
   left: 0
-  right: 2
+  right: 0 #2
   width: 2304
   height: 1296
   photo_delay: 2
   init_time: 5
   focus:
-    left: 45
-    right: 40
+    left: 20 #45
+    right: 20 #40
   crop:
     left:
       top: 350
-      right: 0
+      right: 1
       bottom: 305
       left: 130
     right:
       top: 300
       right: 130
       bottom: 355
-      left: 0
+      left: 1
 audio:
   voices:
     - name: Female 1
@@ -41,3 +41,4 @@ web:
   host: 0.0.0.0
   port: 80
 book_location: /home/pi/books
+debug_location: /home/pi/virtuo_debug

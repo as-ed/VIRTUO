@@ -3,6 +3,7 @@ from argparse import ArgumentParser
 from config import CFG
 from controller import controller as cont
 from hw.button import setup_buttons
+from hw.flipper import load_position, rest_position
 from ocr.camera import init_camera
 from server import server
 
@@ -28,12 +29,16 @@ if __name__ == "__main__":
 	if args.test:
 		cont.test_mode = True
 	else:
+		rest_position()
+
 		if init_camera():
 			cont.cams_inited = True
 		else:
 			print("Cameras not connected")
 
-	if CFG["web"]["host"] != "localhost":
-		setup_buttons()
+		load_position()
+
+		if CFG["web"]["host"] != "localhost":
+			setup_buttons()
 
 	server.run(host=CFG["web"]["host"], port=CFG["web"]["port"], debug=args.test)
