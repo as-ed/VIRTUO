@@ -133,7 +133,3 @@ def calibrate_slider(time_unit=0.08, slider_width=8, total_height=16, verbose=Fa
             if verbose:
                 print("[INFO] Height found as {movements} movements lasting {time_unit}".format(movements=i, time_unit=time_unit))
             return i
-
-
-
-

@@ -36,20 +36,20 @@ function updateStatus(newStatus) {
 						elem.id = book.id
 						elem.classList.add("book")
 						elem.innerHTML = `
-							<td class="md-row sm-row"><input type="text" class="metadata" id="title_${book.id}" value="${book.title}" placeholder="Enter title" oninput="setTitle('${book.id}', this)"></td>
-							<td class="md-row sm-row"><input type="text" class="metadata" id="author_${book.id}" value="${book.author}" placeholder="Enter author" oninput="setAuthor('${book.id}', this)"></td>
-							<td id="pages_${book.id}" class="md-row sm-row"><span class="mobile-bold">${book.pages}</span><span class="mobile-only"> page${(book.pages === 1) ? "" : "s"}, scanned at </span></td>
-							<td class="md-row sm-row"><span class="mobile-bold">${book.time}</span></td>
-							<td class="md-row"><span class="mobile-only">Downloads: </span><a href="books/${book.id}/book.txt" target="_blank" download>Text</a></td>
-							<td class="md-row"><a href="books/${book.id}/book.pdf" target="_blank">PDF</a></td>
-							<td class="md-row"><a href="books/${book.id}/book.epub" target="_blank">EPUB</a></td>
-							<td class="md-row"><a href="books/${book.id}/book.mp3" target="_blank" download>MP3</a></td>
-							<td><audio class="book-playback" controls preload="none" src="books/${book.id}/book.stream.mp3"></audio></td>
+							<td class="md-row sm-row"><input type="text" class="text-field" id="title_${book.id}" value="${book.title}" placeholder="Enter title" oninput="setTitle('${book.id}', this)" aria-label="title"></td>
+							<td class="md-row sm-row"><input type="text" class="text-field" id="author_${book.id}" value="${book.author}" placeholder="Enter author" oninput="setAuthor('${book.id}', this)" aria-label="author"></td>
+							<td id="pages_${book.id}" class="md-row sm-row"><span class="mobile-bold" aria-label="number of pages">${book.pages}</span><span class="mobile-only">  page${(book.pages === 1) ? "" : "s"}, scanned at </span></td>
+							<td class="md-row sm-row"><span class="mobile-bold" aria-label="scanned at time">${book.time}</span></td>
+							<td class="md-row"><span class="mobile-only">Downloads: </span><a href="books/${book.id}/book.txt" target="_blank" download aria-label="download text file">Text</a></td>
+							<td class="md-row"><a href="books/${book.id}/book.pdf" target="_blank" aria-label="download PDF file">PDF</a></td>
+							<td class="md-row"><a href="books/${book.id}/book.epub" target="_blank" aria-label="download EPUB file">EPUB</a></td>
+							<td class="md-row"><a href="books/${book.id}/book.mp3" target="_blank" download aria-label="download MP3 file">MP3</a></td>
+							<td><audio class="book-playback" controls preload="none" src="books/${book.id}/book.stream.mp3" aria-label="book playback"></audio></td>
 							<td id="status_${book.id}" class="book-status">
 							${(newStatus.scanning === book.id) ?
 								'<span class="current-scan">Currently being scanned</span>'
 							:
-								`<a class="continue-scan bold ${(newStatus.scanning == null) ? "" : "inactive"}" onclick="scan(false, '${book.id}')">Continue scanning <i class="fa-solid fa-book-open"></i></a>`
+								`<a class="continue-scan bold ${(newStatus.scanning == null) ? "" : "inactive"}" onclick="scan(false, '${book.id}')" aria-label="continue scanning book">Continue scanning <i class="fa-solid fa-book-open"></i></a>`
 							}
 							</td>`
 
@@ -184,7 +184,7 @@ function scan(listen = false, book = null) {
 		})
 		.catch((err) => {
 			console.log(err)
-			alert("An error has occurred. Could not start scanning.")
+			alert("It looks like the book is inserted upside down. Please rotate it 180 degrees around the vertical axis, clip it in and start the scan again.")
 		})
 }
 

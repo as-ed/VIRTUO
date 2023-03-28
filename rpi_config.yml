@@ -6,19 +6,19 @@ camera:
   photo_delay: 2
   init_time: 5
   focus:
-    left: 45
-    right: 40
+    left: 60
+    right: 50
   crop:
     left:
-      top: 370
-      right: 75
-      bottom: 250
-      left: 0
+      top: 350
+      right: 1
+      bottom: 305
+      left: 130
     right:
-      top: 400
-      right: 0
-      bottom: 200
-      left: 0
+      top: 300
+      right: 130
+      bottom: 355
+      left: 1
 audio:
   voices:
     - name: Female 1
@@ -41,3 +41,4 @@ web:
   host: 0.0.0.0
   port: 80
 book_location: /home/pi/books
+debug_location: /home/pi/virtuo_debug
