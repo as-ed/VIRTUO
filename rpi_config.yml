@@ -1,13 +1,13 @@
 camera:
   left: 0
-  right: 0 #2
+  right: 2
   width: 2304
   height: 1296
   photo_delay: 2
   init_time: 5
   focus:
-    left: 20 #45
-    right: 20 #40
+    left: 45
+    right: 40
   crop:
     left:
       top: 350

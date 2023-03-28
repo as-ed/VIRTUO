@@ -2,7 +2,6 @@ from __future__ import annotations
 
 from queue import SimpleQueue
 from threading import Event, Thread
-from time import sleep
 
 import cv2
 from enum import Enum
