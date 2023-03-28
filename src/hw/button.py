@@ -11,8 +11,8 @@ _BUTTONS = {
 	"rewind": (23, lambda _: cont.rewind()),
 	"play/pause": (24, lambda _: cont.scan_play_pause()),
 	"fast-forward": (25, lambda _: cont.fast_forward()),
-	"stop": (8, lambda _: cont.stop_scan()),
-	"help": (7, lambda _: cont.help())
+	"help": (8, lambda _: cont.help()),
+	"stop": (7, lambda _: cont.stop_scan())
 }
 
 

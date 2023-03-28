@@ -38,6 +38,7 @@ class BaseClipper:
             time.sleep(0.2)
             self.float()
 
+
     def clip(self, float=True, verbose=False):
         if verbose:
             print("[INFO] Base Clipper clipping...")

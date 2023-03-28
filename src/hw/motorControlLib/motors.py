@@ -14,6 +14,7 @@ class Motors(object):
 		self.encoder_register = 0x0
 		self.num_encoder_ports = 6
 		self.refresh_rate = 10 #refresh rate - reduces errors in i2c reading
+		self.encoder_data = [0] * self.num_encoder_ports
 
 	def move_motor(self,id,speed):
 		self.mc.setMotor(id, speed)
@@ -25,15 +26,22 @@ class Motors(object):
 		self.mc.stopMotors()
 
 	def __i2c_read_encoder(self):
-		self.encoder_data = self.bus.read_i2c_block_data(self.encoder_address, 	\
-							self.encoder_register, 	\
-							self.num_encoder_ports)
+		for i, delta in enumerate(self.bus.read_i2c_block_data(self.encoder_address,
+							self.encoder_register,
+							self.num_encoder_ports)):
+			if delta > 128:
+				delta -= 256
+			self.encoder_data[i] += delta
+
+
 	def read_encoder(self,id):
 		self.__i2c_read_encoder()
-		encoder_id_value =self.encoder_data[id]
+		encoder_id_value = self.encoder_data[id]
+		self.encoder_data[id] = 0  # Reset pin
 		return encoder_id_value
 
 	def print_encoder_data(self):
 		self.__i2c_read_encoder()
 		ts = str(datetime.now())
 		print(self.encoder_data, ts.rjust(50,'.'))
+		self.encoder_data = [0] * self.num_encoder_ports

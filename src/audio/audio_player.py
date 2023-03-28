@@ -104,6 +104,9 @@ class AudioPlayer:
 			ffmpeg.input(f.name.encode(), f="concat", safe=0).output(os.path.join(book, "book.mp3"), c="copy").run(overwrite_output=True, quiet=True)
 
 	def rewind(self) -> None:
+		if not self.active:
+			return
+
 		if self.file_pos >= 10:
 			self._player.seek(-10)
 		elif self._player.playlist_pos == 0:
@@ -114,6 +117,9 @@ class AudioPlayer:
 			self._safe_seek(self._current_file_duration() - seek_amount)
 
 	def fast_forward(self) -> None:
+		if not self.active:
+			return
+
 		duration_remaining = self._current_file_duration() - self.file_pos
 
 		if duration_remaining >= 10:
@@ -125,6 +131,9 @@ class AudioPlayer:
 			self._safe_seek(10 - duration_remaining)
 
 	def seek(self, pos: float) -> None:
+		if not self.active:
+			return
+
 		if 0 <= pos < self._playlist_duration[-1]:
 			self._player.playlist_pos = next(i - 1 for i, d in enumerate(self._playlist_duration) if d > pos)
 			self._safe_seek(pos - self._playlist_duration[self._player.playlist_pos])

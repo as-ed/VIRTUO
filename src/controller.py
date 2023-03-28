@@ -13,7 +13,7 @@ from audio.tts import TTS
 from config import CFG, settings
 from hw.flipper import flip_page, load_position, rest_position
 from ocr.camera import Camera, take_photo, init_camera
-from ocr.img_to_text import get_text
+from ocr.img_to_text import get_text, upside_down
 
 
 class _Controller:
@@ -61,12 +61,25 @@ class _Controller:
 		self._books.sort(key=lambda b: b["time"])
 
 	def scan(self, listen: bool, book: str = None) -> Optional[str]:
-		if not self.cams_inited:
+		print("scan")
+
+		if not self.cams_inited and not self.test_mode:
 			init_camera()
 			self.cams_inited = True
 
 		with self._scan_start_stop_lock:
 			if self._scanning is None:
+				# check book rotation
+				rest_position()
+
+				if upside_down():
+					load_position()
+
+					if listen:
+						self._help_output("upside_down.mp3")
+
+					return
+
 				# not already scanning book
 				if book is None:
 					# create new book
@@ -119,7 +132,10 @@ class _Controller:
 				return self._scanning
 
 	def stop_scan(self) -> bool:
+		print("stop_scan")
+
 		self._help_player.stop()
+		self._player.pause()
 
 		if self._scanning is not None:
 			self._stop_event.set()
@@ -133,34 +149,45 @@ class _Controller:
 		return False
 
 	def scan_play_pause(self) -> None:
-		print(1)
+		print("scan_play_pause")
 
 		if self._page_flip_error != 0:
 			self.clear_page_flip_error()
 			return
 
 		if self._scanning is None or not self._listening:
-			print(2)
 			self.scan(True)
 		else:
 			self.toggle_pause()
 
 	def toggle_pause(self) -> bool:
+		print("toggle_pause")
+
 		return self._player.play_pause() and self._player.active
 
 	def pause(self) -> None:
+		print("pause")
+
 		self._player.pause()
 
 	def rewind(self) -> None:
+		print("rewind")
+
 		self._player.rewind()
 
 	def fast_forward(self) -> None:
+		print("fast_forward")
+
 		self._player.fast_forward()
 
 	def seek(self, pos) -> None:
+		print("seek")
+
 		self._player.seek(pos)
 
 	def set_book_attribute(self, book: str, attribute: str, value: Any) -> bool:
+		print("set_book_attribute")
+
 		if not os.path.isdir(os.path.join(CFG["book_location"], book)):
 			return False
 
@@ -181,7 +208,9 @@ class _Controller:
 		return True
 
 	def help(self) -> None:
-		self._help_output("static/help.mp3")
+		print("help")
+
+		Thread(target=self._help_output, args=("help.mp3",), daemon=True).start()
 
 	def clear_page_flip_error(self) -> None:
 		self._manual_flip_confirm.set()
@@ -191,6 +220,8 @@ class _Controller:
 			return metadata["last_page"] if "last_page" in (metadata := json.load(f)) else -1
 
 	def add_wifi(self, ssid: str, password: str) -> None:
+		print("add_wifi")
+
 		with open("/etc/wpa_supplicant/wpa_supplicant.conf", "a") as f:
 			f.write(_WPA_NETWORK.format(ssid, password))
 
@@ -258,19 +289,20 @@ class _Controller:
 		return [voice["name"] for voice in CFG["audio"]["voices"]]
 
 	def _help_output(self, file: str) -> None:
-
 		if was_playing := self.playing:
 			self.pause()
+			sleep(1)
 
-		sleep(1)
-		self._help_player.play_file(file)
-		sleep(1)
+		self._help_player.play_file(os.path.join("src/static", file))
 
 		if was_playing:
+			sleep(1)
 			self.seek(self.playback_pos - 5)
 			self.toggle_pause()
 
 	def _new_book(self) -> str:
+		print("_new_book")
+
 		now = datetime.now()
 		date = datetime.isoformat(now)[:10]
 		num = len(list(filter(lambda b: re.match(date + r" - (\d*)", b), os.listdir(CFG["book_location"])))) + 1
@@ -289,6 +321,8 @@ class _Controller:
 		return book_dir
 
 	def _scan(self, book: str) -> None:
+		print("_scan")
+
 		book_path = os.path.join(CFG["book_location"], book)
 
 		cameras = (Camera.left, Camera.right)
@@ -296,7 +330,8 @@ class _Controller:
 		page_nr = None
 		current_book_dict = [b for b in self._books if b["id"] == book][0]
 
-		rest_position()
+		if self.listening and not self.playing:
+			self._help_output("first_page.mp3")
 
 		while not last_page and not self._stop_event.is_set():
 			# OCR
@@ -332,7 +367,7 @@ class _Controller:
 
 					# multiple pages flipped at once
 					num_pages = (new_page_nr - page_nr) // 2
-					self._help_output(f"static/flip_back_{num_pages}.mp3")
+					self._help_output(f"flip_back_{num_pages}.mp3")
 					self._manual_flip_confirm.clear()
 					self._page_flip_error = num_pages
 					self._manual_flip_confirm.wait()
@@ -343,13 +378,14 @@ class _Controller:
 					flip_page()
 					break
 
-			# TTS
-			audio, fmt = self._tts.synthesize(text)
-			self._player.add_audio(audio, fmt, self._metadata["pages"], self._listening)
+			if text != "":
+				# TTS
+				audio, fmt = self._tts.synthesize(text)
+				self._player.add_audio(audio, fmt, self._metadata["pages"], self._listening)
 
-			# write book text
-			with open(os.path.join(book_path, _Controller.TEXT_FILE), "a") as f:
-				f.write(text)
+				# write book text
+				with open(os.path.join(book_path, _Controller.TEXT_FILE), "a") as f:
+					f.write(text)
 
 			# update metadata
 			self._metadata["pages"] = current_book_dict["pages"] = self._metadata["pages"] + 1

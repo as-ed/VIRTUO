@@ -12,7 +12,7 @@ from pytesseract import Output
 from spellchecker import SpellChecker
 
 from config import CFG
-from ocr.camera import Camera
+from ocr.camera import Camera, take_photo
 from ocr.page_dewarp import dewarp
 from util import test_connection
 
@@ -39,12 +39,19 @@ def get_text(img: np.ndarray, book_loc: Optional[str], side: Camera, page_nr: in
 
 	_save_img(img, book_loc, f"{page_nr}_original")
 
-	if _is_last_page(img, side):
-		return None
+	img = _rotate_crop(img, side)
+	_save_img(img, book_loc, f"{page_nr}_static_crop")
 
-	dewarped = _pre_processing(img, side, book_loc, page_nr)
+	# check for QR code at book end
+	if side == Camera.right and _is_last_page(img):
+		return
+
+	# check if page is empty
+	if (dewarped := _pre_processing(img, side, book_loc, page_nr)) is None:
+		return "", "", None
 
 	if test_connection() and (response := _google_ocr_request(dewarped)) is not None:
+		print("Using Google OCR")
 		blocks = _parse_google_ocr_response(response)
 		main_text = _get_google_ocr_page_main_body(blocks)
 		real_page_nr = _get_google_ocr_page_number(blocks)
@@ -60,12 +67,44 @@ def get_text(img: np.ndarray, book_loc: Optional[str], side: Camera, page_nr: in
 	return text, last_sentence, real_page_nr
 
 
+def upside_down() -> bool:
+	if (osd := pytesseract.image_to_osd(_rotate_crop(take_photo(Camera.right), Camera.right), output_type=Output.DICT))["orientation_conf"] < 5:
+		osd = pytesseract.image_to_osd(_rotate_crop(take_photo(Camera.left), Camera.left), output_type=Output.DICT)
+
+	return osd["orientation_conf"] >= 5 and osd["orientation"] == 180
+
+
+def _get_left_page_boundary(img: np.ndarray) -> Optional[int]:
+	grayscaled = cv2.cvtColor(img, cv2.COLOR_RGB2GRAY)
+
+	mask = cv2.adaptiveThreshold(grayscaled, 255, cv2.ADAPTIVE_THRESH_MEAN_C, cv2.THRESH_BINARY_INV, 27, 21)
+
+	mask = cv2.dilate(mask, np.ones((7, 1), np.uint8), iterations=1)
+	# mask = cv2.dilate(mask, np.ones((1, 3), np.uint8), iterations=5)
+
+	img_area = mask.shape[1] * mask.shape[0]
+	contours = cv2.findContours(mask, cv2.RETR_LIST, cv2.CHAIN_APPROX_NONE)[-2]
+	contour_boxes = [ cv2.boundingRect(contour) for contour in contours ]
+	# Filter by area
+	contour_boxes = list(
+		filter(
+			lambda cbox: img_area * 0.85 > cbox[2] * cbox[3] > img_area * 0.05, contour_boxes
+		)
+	)
+	# Filter by starting x position
+	contour_boxes = list(filter(lambda cbox: cbox[0] > 10, contour_boxes))
+	contour_boxes.sort(key=lambda box: box[0])
+
+	if len(contour_boxes) > 0:
+		return contour_boxes[0][0]/img.shape[1]
+
+
 def _google_ocr_request(img: np.ndarray):
 	success, encoded_image = cv2.imencode(".png", img)
 	content = encoded_image.tobytes()
 
 	if not success:
-		return None
+		return
 
 	image = vision_v1.Image(content=content)
 
@@ -73,11 +112,11 @@ def _google_ocr_request(img: np.ndarray):
 		response = _ocr_client.document_text_detection(image=image, image_context={"language_hints": ["en"]}, timeout=30)
 
 		if response.error.message:
-			return None
+			return
 
 		return response
 	except Exception:
-		return None
+		pass
 
 
 def _parse_google_ocr_response(response):
@@ -121,34 +160,28 @@ def _get_google_ocr_page_number(blocks: List[str]) -> Optional[int]:
 		if re.match(r"^\d+$", text.strip()):
 			return int(text)
 
-	return None
-
 
 def _get_google_ocr_page_title(blocks: List[str]) -> Optional[str]:
 	for text in blocks:
-		if len(text) < 20:
+		if len(text) < 25:
 			return text
-
-	return None
 
 
 def _get_google_ocr_page_main_body(blocks: List[str]) -> str:
 	output = ""
 
 	for text in blocks:
-		if len(text) >= 20:
+		if len(text) >= 25:
 			output += text
 
-	return " ".join(blocks)
+	return output
 
 
-def _is_last_page(img: np.ndarray, side: Camera) -> bool:
-	rotated = _rotate(img, side)
-
+def _is_last_page(img: np.ndarray) -> bool:
 	qr_detector = cv2.QRCodeDetector()
-	data, _, _ = qr_detector.detectAndDecode(rotated)
+	data, _, _ = qr_detector.detectAndDecode(img)
 
-	return len(data) > 0 and data == "http://virtuo.local"
+	return data == "http://virtuo.local"
 
 
 def _extract_main_body(dewarped: np.ndarray, bboxes: List[Tuple[int]], book_loc: str, page_nr: int) -> np.ndarray:
@@ -173,21 +206,24 @@ def _extract_main_body(dewarped: np.ndarray, bboxes: List[Tuple[int]], book_loc:
 	return (mask & dewarped)[max(0, min_y1 - 20) : max_y2 + 20, max(0, min_x1 - 20) : max_x2 + 20]
 
 
-def _rotate(img: np.ndarray, side: Camera):
-	# Rotate image by 90 degrees as camera returns a landscape orientation
+def _rotate_crop(img: np.ndarray, side: Camera):
 	if side == Camera.left:
 		rotated = cv2.rotate(img, cv2.ROTATE_90_CLOCKWISE)
 	else:
 		rotated = cv2.rotate(img, cv2.ROTATE_90_COUNTERCLOCKWISE)
 
-	return rotated
+	return rotated[
+		CFG["camera"]["crop"][side.name]["top"]:-CFG["camera"]["crop"][side.name]["bottom"],
+		CFG["camera"]["crop"][side.name]["left"]:-CFG["camera"]["crop"][side.name]["right"]]
 
 
-def _pre_processing(img: np.ndarray, side: Camera, book_loc: str, page_nr: int) -> np.ndarray:
-	rotated = _rotate(img, side)
-	_save_img(rotated, book_loc, f"{page_nr}_rotated")
+def _pre_processing(img: np.ndarray, side: Camera, book_loc: str, page_nr: int) -> Optional[np.ndarray]:
+	dewarped = dewarp(img, side, page_nr)
 
-	return dewarp(rotated)
+	if dewarped is not None:
+		_save_img(dewarped, book_loc, f"{page_nr}_dewarped")
+
+	return dewarped
 
 
 def _extract_bboxes(img: np.ndarray) -> List[Tuple[int]]:
