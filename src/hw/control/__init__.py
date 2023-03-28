@@ -89,7 +89,8 @@ def turn_page(down_var=0.6, verbose=True, interrupt=False):
 
     run_actions(actions, verbose=verbose, interrupt=interrupt)
 
-def flatten_page(verbose=True, interrupt=False):
+
+def flatten(verbose=True, interrupt=False):
     actions = [ 
             (lambda: mm.to_angle(5), "Moving to middle"),
             (lambda: s.down(1.0), "Moving slider to push page"),
@@ -105,6 +106,7 @@ def flatten_page(verbose=True, interrupt=False):
         ]
 
     run_actions(actions, verbose=verbose, interrupt=interrupt)
+
 
 def load_book(verbose=True, interrupt=False, bc_up=True):
    actions = [

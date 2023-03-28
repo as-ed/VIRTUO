@@ -11,7 +11,7 @@ from typing import List, Optional, Any, Dict
 from audio.audio_player import AudioPlayer
 from audio.tts import TTS
 from config import CFG, settings
-from hw.flipper import flip_page, load_position, rest_position
+from hw.flipper import flip_page, load_position, flatten_page
 from ocr.camera import Camera, take_photo, init_camera
 from ocr.img_to_text import get_text, upside_down
 
@@ -73,9 +73,9 @@ class _Controller:
 					self._help_output("first_page.mp3")
 
 				# check book rotation
-				rest_position()
+				flatten_page()
 
-				if upside_down():
+				if False:#upside_down():
 					load_position()
 
 					if listen:
@@ -168,6 +168,8 @@ class _Controller:
 
 	def toggle_pause(self) -> bool:
 		print("toggle_pause")
+
+		self._help_player.stop()
 
 		return self._player.play_pause() and self._player.active
 
