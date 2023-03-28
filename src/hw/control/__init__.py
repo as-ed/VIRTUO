@@ -54,6 +54,7 @@ def turn_page(down_var=0.55, verbose=True, interrupt=False):
         (lambda: s.down(down_var), "Moving slider down"),
         (lambda: tcl.unclip(verbose=verbose), "Unclipping page to be turned"),
         (lambda: f.on(), "Turning fan on"),
+        (lambda: time.sleep(3), "Waiting for page to attach"),
         (lambda: mm.to_angle(1, verbose=verbose), "Moving to pick up page"),
         (lambda: time.sleep(3), "Waiting for page to attach"),
         (lambda: mm.to_angle(2, verbose=verbose), "Making space for re-clipping"),
