@@ -190,12 +190,18 @@ class _Controller:
 	def rewind(self) -> None:
 		print("rewind")
 
-		self._player.rewind()
+		if self._help_player.active:
+			self._help_player.rewind()
+		else:
+			self._player.rewind()
 
 	def fast_forward(self) -> None:
 		print("fast_forward")
 
-		self._player.fast_forward()
+		if self._help_player.active:
+			self._help_player.fast_forward()
+		else:
+			self._player.fast_forward()
 
 	def seek(self, pos) -> None:
 		print("seek")
@@ -227,7 +233,10 @@ class _Controller:
 	def help(self) -> None:
 		print("help")
 
-		Thread(target=self._help_output, args=("help.mp3",), daemon=True).start()
+		if self._help_player.active:
+			self._help_player.stop()
+		else:
+			Thread(target=self._help_output, args=("help.mp3",), daemon=True).start()
 
 	def clear_page_flip_error(self) -> None:
 		self._manual_flip_confirm.set()
