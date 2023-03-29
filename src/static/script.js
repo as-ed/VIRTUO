@@ -175,6 +175,8 @@ function scan(listen = false, book = null) {
 		.then((response) => {
 			if (response.ok) {
 				return response.text()
+			} else if (response.status === 400) {
+				return Promise.reject(180)
 			} else {
 				return Promise.reject()
 			}
@@ -184,7 +186,9 @@ function scan(listen = false, book = null) {
 		})
 		.catch((err) => {
 			console.log(err)
-			alert("It looks like the book is inserted upside down. Please rotate it 180 degrees around the vertical axis, clip it in and start the scan again.")
+
+			if (err === 180)
+				alert("It looks like the book is inserted upside down. Please rotate it 180 degrees around the vertical axis, clip it in and start the scan again.")
 		})
 }
 

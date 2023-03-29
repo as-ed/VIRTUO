@@ -88,7 +88,7 @@ class AudioPlayer:
 			self._player.cycle("pause")
 
 	def stop(self) -> None:
-		self._player.stop()#keep_playlist="yes")
+		self._player.stop()
 
 	def quit(self) -> None:
 		self._player.stop()

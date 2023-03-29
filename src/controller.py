@@ -37,6 +37,7 @@ class _Controller:
 		self.cams_inited = False
 		self._page_flip_error = 0
 		self._manual_flip_confirm = Event()
+		self.upside_down = False
 
 		self._books = []
 		for book_dir in os.scandir(CFG["book_location"]):
@@ -75,13 +76,17 @@ class _Controller:
 				# check book rotation
 				flatten_page()
 
-				if False:#upside_down():
+				if not self.upside_down and upside_down():
 					load_position()
 
 					if listen:
 						self._help_output("upside_down.mp3")
 
+					self.upside_down = True
+
 					return
+
+				self.upside_down = False
 
 				# not already scanning book
 				if book is None:
@@ -142,10 +147,17 @@ class _Controller:
 
 		if self._scanning is not None:
 			self._stop_event.set()
+
+			if was_listening := self.listening:
+				self._help_output("stop_scan.mp3")
+
 			self._scan_thread.join()
 
 			self._stop_event.clear()
 			self._scan_thread = None
+
+			if was_listening:
+				self._help_output("scanner_ready.mp3")
 
 			return True
 
@@ -154,17 +166,14 @@ class _Controller:
 	def scan_play_pause(self) -> None:
 		print("scan_play_pause")
 
-		def f() -> None:
-			if self._page_flip_error != 0:
-				self.clear_page_flip_error()
-				return
+		if self._page_flip_error != 0:
+			self.clear_page_flip_error()
+			return
 
-			if self._scanning is None or not self._listening:
-				self.scan(True)
-			else:
-				self.toggle_pause()
-
-		Thread(target=f).start()
+		if self._scanning is None or not self._listening:
+			Thread(target=self.scan, args=(True,)).start()
+		else:
+			self.toggle_pause()
 
 	def toggle_pause(self) -> bool:
 		print("toggle_pause")
@@ -297,7 +306,7 @@ class _Controller:
 		return [voice["name"] for voice in CFG["audio"]["voices"]]
 
 	def _help_output(self, file: str) -> None:
-		if was_playing := self.playing:
+		if was_playing := (self.playing and not self.paused):
 			self.pause()
 			sleep(1)
 
@@ -306,7 +315,7 @@ class _Controller:
 		if was_playing:
 			sleep(1)
 			self.seek(self.playback_pos - 5)
-			self.toggle_pause()
+			self._player.resume()
 
 	def _new_book(self) -> str:
 		print("_new_book")
@@ -423,7 +432,7 @@ class _Controller:
 controller = _Controller()
 
 
-_HELP_TEXT = "I am Virtuo, your accessible book scanning robot. I can scan your books and read them out to you. To have a book read to you just place it on top of the book tray and slide it forwards until it hits the stop. When placing the book on the tray, rotate it so that the top side faces towards you and the front cover is on the right side when opened. Open it up, slide the clipper mechanism over the book cover to secure it and flip down the clippers. Then open it up to the page where you want to start listening and press the play button. You can control the playback using the rewind and fast-forward buttons and the play button for pausing and resuming. To adjust the volume you can use the dial on the right hand side and to stop the scan or reset the robot to scan another book just press the reset button. You can access and manage a list of all your scanned books and access more advanced options like changing the voice or continuing previous scans, using the web interface. To access it, just connect any device with a web browser to the same WiFi network as the robot and visit http://virtuo.local, that is Victor, India, Romeo, Tango, Uniform, Oscar, dot, Lima, Oscar, Charlie, Alpha, Lima."
+_HELP_TEXT = "I am Virtuo, your accessible book scanning robot. I can scan your books and read them out to you. To have a book read to you just place it on top of the book tray and slide it forwards until it hits the stop. When placing the book on the tray, rotate it so that the top side faces towards you and the front cover is on the right side when opened. Open it up, slide the clipper mechanism over the book cover to secure it and flip down the clippers. Then open it up to the page where you want to start listening and press the play button. You can control the playback using the rewind and fast-forward buttons and the play button for pausing and resuming. To adjust the volume you can use the dial on the right hand side and to stop the scan or reset the robot to scan another book just press the reset button. The buttons from left to right are: rewind, play and pause, fast-forward, help, and reset. You can access and manage a list of all your scanned books and access more advanced options like changing the voice or continuing previous scans, using the web interface. To access it, just connect any device with a web browser to the same WiFi network as the robot and visit http://virtuo.local, that is Victor, India, Romeo, Tango, Uniform, Oscar, dot, Lima, Oscar, Charlie, Alpha, Lima."
 
 _WPA_NETWORK = """
 network={{
